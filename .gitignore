@@ -2,12 +2,14 @@ node_modules/
 web/dist/
 dist/
 .venv/
+.temp/
 __pycache__/
 *.py[cod]
 .env
 .env.*
 !.env.example
 runtime/
+.run/
 *.log
 .DS_Store
 Thumbs.db
