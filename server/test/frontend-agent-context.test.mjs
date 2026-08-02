@@ -7,6 +7,7 @@ import {
   loadFrontendPrompt,
   loadAssistantProfile,
   normalizeClientContext,
+  selectMemoriesForPrompt,
 } from '../src/conversation/frontend-agent-context.mjs'
 
 test('uses a valid client timezone and returns an exact local clock snapshot', () => {
@@ -205,4 +206,25 @@ test('omits user preferences when the user has only factual memory', () => {
 
   assert.doesNotMatch(context, /<user_preferences>/)
   assert.match(context, /<user_memory>/)
+})
+
+test('keeps all profile memories and only the newest long_term Top-K', () => {
+  const selected = selectMemoriesForPrompt([
+    { id: 'p1', scope: 'profile', content: '称呼：峰哥', updated_at: 1 },
+    { id: 'p2', scope: 'profile', content: '时区：上海', updated_at: 2 },
+    ...Array.from({ length: 15 }, (_, index) => ({
+      id: `lt_${index}`,
+      scope: 'long_term',
+      content: `fact-${index}`,
+      updated_at: index,
+    })),
+  ], { longTermLimit: 12 })
+
+  assert.equal(selected.filter(item => item.scope === 'profile').length, 2)
+  assert.equal(selected.filter(item => item.scope === 'long_term').length, 12)
+  assert.equal(selected.find(item => item.scope === 'long_term')?.content, 'fact-14')
+
+  const context = buildFrontendContext({ memories: selected })
+  assert.match(context, /fact-14/)
+  assert.doesNotMatch(context, /fact-0/)
 })
