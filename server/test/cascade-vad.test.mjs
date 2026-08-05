@@ -56,3 +56,20 @@ test('maxSpeechMs of zero disables the force commit', () => {
   for (let i = 0; i < 300; i += 1) vad.push(frame(20, 3000))
   assert.deepEqual(events, ['start'])
 })
+
+test('far-field / low-energy audio does not open a turn at strict defaults', () => {
+  const { vad, events } = makeVad({
+    threshold: 0.04,
+    minSpeechMs: 320,
+    silenceMs: 650,
+  })
+  // RMS ≈ 800/32768 ≈ 0.024，低于 0.04；持续 500ms 也不启轮。
+  for (let i = 0; i < 25; i += 1) vad.push(frame(20, 800))
+  assert.deepEqual(events, [])
+  // 近场够响但短于 minSpeechMs：仍不启轮。
+  for (let i = 0; i < 10; i += 1) vad.push(frame(20, 5000))
+  assert.deepEqual(events, [])
+  // 近场够响且够久：才启轮。
+  for (let i = 0; i < 20; i += 1) vad.push(frame(20, 5000))
+  assert.deepEqual(events, ['start'])
+})

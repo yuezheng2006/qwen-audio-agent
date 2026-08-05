@@ -1,8 +1,10 @@
-import { DashScopeTask } from './dashscope-ws.mjs'
 import {
-  createFishAudioSynthesizer,
-  normalizeFishProvider,
-} from './fish-tts.mjs'
+  resolveCascadeTtsProviderId,
+} from '../../../../../shared/cascade-tts-plugins.mjs'
+import { DashScopeTask } from './dashscope-ws.mjs'
+import { createFishAudioSynthesizer } from './fish-tts.mjs'
+import { createListenHubSynthesizer } from './listenhub-tts.mjs'
+import { createMinimaxSynthesizer } from './minimax-tts.mjs'
 import { createVoiceBoxSynthesizer } from './voicebox-tts.mjs'
 
 // Streaming TTS adapter contract: one synthesizer per response.
@@ -15,9 +17,8 @@ import { createVoiceBoxSynthesizer } from './voicebox-tts.mjs'
 //   await synthesizer.finish()  // resolves when all audio has arrived
 //   synthesizer.abort()         // barge-in: stop immediately
 //
-// Default model is qwen-audio-3.0-tts-flash (same DashScope duplex protocol).
-// CosyVoice is intentionally not the cascade default. Swap voices via
-// CASCADE_TTS_PROVIDER + CASCADE_TTS_VOICE_ID.
+// Supplier metadata (env/defaults/labels) lives in shared/cascade-tts-plugins.mjs.
+// This file only maps plugin id → synthesizer factory (the upload/access seam).
 
 class DashScopeSynthesizer {
   constructor(cascadeConfig, { onAudio } = {}) {
@@ -26,6 +27,11 @@ class DashScopeSynthesizer {
     this.aborted = false
     this.failure = null
     this.doneResolvers = []
+    const instruction = String(tts.instruction || '').trim()
+    // Qwen-Audio-3.0-TTS: natural-language direction via `instruction`;
+    // fine-grained [whisper]/[laughing] tags travel inside sent text.
+    // Official docs mark tag reliability highest on unidirectional streams —
+    // duplex cascade still passes tags through unchanged for best effort.
     this.task = new DashScopeTask({
       url: dashscopeWsUrl,
       apiKey: tts.apiKey,
@@ -38,6 +44,7 @@ class DashScopeSynthesizer {
         voice: tts.voice,
         format: 'pcm',
         sample_rate: tts.sampleRate,
+        ...(instruction ? { instruction } : {}),
       },
       onBinary: buffer => {
         if (!this.aborted) this.onAudio?.(buffer)
@@ -84,7 +91,7 @@ class DashScopeSynthesizer {
   }
 }
 
-/** Registry of cascade TTS engines (VoiceBox-style pluggable backends). */
+/** Runtime factories for registered cascade TTS plugins. */
 export const TTS_PROVIDERS = {
   dashscope: (cascadeConfig, handlers) => (
     new DashScopeSynthesizer(cascadeConfig, handlers)
@@ -92,9 +99,14 @@ export const TTS_PROVIDERS = {
   voicebox: (cascadeConfig, handlers) => (
     createVoiceBoxSynthesizer(cascadeConfig, handlers)
   ),
-  // Fish Audio S2.1 / S2 / S1 (HTTP streaming PCM).
   fish: (cascadeConfig, handlers) => (
     createFishAudioSynthesizer(cascadeConfig, handlers)
+  ),
+  listenhub: (cascadeConfig, handlers) => (
+    createListenHubSynthesizer(cascadeConfig, handlers)
+  ),
+  minimax: (cascadeConfig, handlers) => (
+    createMinimaxSynthesizer(cascadeConfig, handlers)
   ),
 }
 
@@ -103,8 +115,8 @@ export function listTtsProviders() {
 }
 
 export function createSynthesizer(cascadeConfig, handlers) {
-  const raw = String(cascadeConfig?.tts?.provider || 'dashscope').toLowerCase()
-  const key = normalizeFishProvider(raw) || raw
+  const raw = String(cascadeConfig?.tts?.provider || 'dashscope')
+  const key = resolveCascadeTtsProviderId(raw)
   const factory = TTS_PROVIDERS[key]
   if (!factory) {
     throw new Error(

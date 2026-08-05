@@ -44,7 +44,7 @@ test('cascade config wires fish s2.1 defaults from FISH_* env', () => {
 test('tts registry lists fish alongside dashscope and voicebox', () => {
   assert.deepEqual(
     listTtsProviders().sort(),
-    ['dashscope', 'fish', 'voicebox'],
+    ['dashscope', 'fish', 'listenhub', 'minimax', 'voicebox'],
   )
 })
 

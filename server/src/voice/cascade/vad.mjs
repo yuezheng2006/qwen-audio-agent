@@ -8,8 +8,9 @@ import { pcm16DurationMs, pcm16Rms } from './pcm.mjs'
 export class EnergyVad {
   constructor({
     sampleRate = 16000,
-    threshold = 0.015,
-    minSpeechMs = 180,
+    // Defaults match resolveCascadeConfig：近场优先，远场弱拾音忽略。
+    threshold = 0.04,
+    minSpeechMs = 320,
     silenceMs = 650,
     maxSpeechMs = 12000,
     onSpeechStart,

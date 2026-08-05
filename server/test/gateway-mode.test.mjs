@@ -64,6 +64,24 @@ test('cascade fish provider keeps s2.1 model and reference id', () => {
   assert.notEqual(env.CASCADE_TTS_MODEL, 'qwen-audio-3.0-tts-flash')
 })
 
+test('cascade listenhub and minimax keep their own model and voice', () => {
+  const listenhub = resolveGatewayModeEnv('cascade', {
+    CASCADE_TTS_PROVIDER: 'listenhub',
+    LISTENHUB_SPEAKER_ID: 'voice-clone-abc',
+  })
+  assert.equal(listenhub.CASCADE_TTS_PROVIDER, 'listenhub')
+  assert.equal(listenhub.CASCADE_TTS_MODEL, 'flowtts')
+  assert.equal(listenhub.CASCADE_TTS_VOICE_ID, 'voice-clone-abc')
+
+  const minimax = resolveGatewayModeEnv('cascade', {
+    CASCADE_TTS_PROVIDER: 'minimax',
+    MINIMAX_VOICE_ID: 'fenggeMm01',
+  })
+  assert.equal(minimax.CASCADE_TTS_PROVIDER, 'minimax')
+  assert.equal(minimax.CASCADE_TTS_MODEL, 'speech-02-turbo')
+  assert.equal(minimax.CASCADE_TTS_VOICE_ID, 'fenggeMm01')
+})
+
 test('voiceDisplayName recognizes fengge clone and system voices', () => {
   assert.equal(voiceDisplayName(FENGGE_QWEN_TTS_VOICE), '峰哥复刻')
   assert.equal(voiceDisplayName('longanqian'), '龙安茜（系统）')
@@ -72,6 +90,14 @@ test('voiceDisplayName recognizes fengge clone and system voices', () => {
   assert.equal(
     voiceDisplayName('9a9cf47702da476aa4629e2506d4a857', { provider: 'fish' }),
     'Fish 9a9cf477…d4a857',
+  )
+  assert.equal(
+    voiceDisplayName('voice-clone-693524c7ccbca1fc97243662', { provider: 'listenhub' }),
+    'ListenHub voice-clon…243662',
+  )
+  assert.equal(
+    voiceDisplayName('fenggeMm01', { provider: 'minimax' }),
+    'MiniMax fenggeMm01',
   )
 })
 

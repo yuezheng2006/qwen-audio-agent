@@ -6,8 +6,11 @@ import {
 } from '../src/voice/cascade/adapters/tts.mjs'
 import { VoiceBoxSynthesizer } from '../src/voice/cascade/adapters/voicebox-tts.mjs'
 
-test('tts registry lists dashscope voicebox and fish', () => {
-  assert.deepEqual(listTtsProviders().sort(), ['dashscope', 'fish', 'voicebox'])
+test('tts registry lists dashscope voicebox fish listenhub minimax', () => {
+  assert.deepEqual(
+    listTtsProviders().sort(),
+    ['dashscope', 'fish', 'listenhub', 'minimax', 'voicebox'],
+  )
 })
 
 test('voicebox synthesizer posts text and emits pcm', async () => {

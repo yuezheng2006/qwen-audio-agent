@@ -22,6 +22,16 @@ Thumbs.db
 config/openclaw-workspace/
 config/openclaw.json5.last-good
 
+# Episode hand-verify scratch (committed samples: examples/episodes/*.json)
+examples/episodes/local/
+
+# Android demo build outputs (sources live under examples/android-demo/)
+examples/android-demo/.gradle/
+examples/android-demo/**/build/
+examples/android-demo/local.properties
+examples/android-demo/.idea/
+.data/episodes/
+
 # Agent workspaces create user deliverables at runtime.
 config/opencode-workspace/*
 !config/opencode-workspace/AGENTS.md

@@ -8,6 +8,23 @@ async function readJson(response) {
   return payload
 }
 
+function cascadeVoiceHint(runtime) {
+  const provider = runtime?.cascade?.ttsProvider || 'tts'
+  const model = runtime?.cascade?.tts || 'model'
+  const voice = runtime?.cascade?.voiceLabel
+    || runtime?.realtimeVoiceLabel
+    || runtime?.cascade?.voice
+    || runtime?.realtimeVoice
+    || '未配置音色'
+  return `VAD→STT→LLM→TTS · ${provider} · ${model} · ${voice}`
+}
+
+function s2sVoiceHint(runtime) {
+  const voice = runtime?.realtimeVoiceLabel || runtime?.realtimeVoice || '系统音色'
+  const model = runtime?.realtimeModel || 'Realtime'
+  return `${model} · ${voice}`
+}
+
 export default function RuntimeSettings({
   open,
   onClose,
@@ -129,8 +146,11 @@ export default function RuntimeSettings({
         </header>
 
         <section>
-          <h3>前台模式</h3>
-          <p>默认级联：保证峰哥复刻音色。S2S 仅作低延迟旁路（系统音色）。</p>
+          <h3>高级：切换前台模式</h3>
+          <p>
+            Fork 能力：会写入配置并<strong>重启 Gateway</strong>。
+            常规用法请保持当前模式；仅本页切换会话引擎见 Header「会话前台引擎」。
+          </p>
           <label className="mode-option">
             <input
               type="radio"
@@ -141,7 +161,7 @@ export default function RuntimeSettings({
             />
             <span>
               <b>级联 cascade（推荐）</b>
-              <small>VAD→STT→LLM→Qwen-Audio-TTS · 峰哥复刻</small>
+              <small>{cascadeVoiceHint(runtime)}</small>
             </span>
           </label>
           <label className="mode-option">
@@ -153,8 +173,8 @@ export default function RuntimeSettings({
               disabled={busy}
             />
             <span>
-              <b>S2S（低延迟）</b>
-              <small>Qwen-Audio-Realtime · longanqian</small>
+              <b>S2S（低延迟旁路）</b>
+              <small>{s2sVoiceHint(runtime)}</small>
             </span>
           </label>
           <button
@@ -174,15 +194,20 @@ export default function RuntimeSettings({
           </p>
           {runtime?.frontendMode === 'cascade' && (
             <p className="hint">
-              STT {runtime?.cascade?.stt} · TTS {runtime?.cascade?.tts}
+              STT {runtime?.cascade?.stt || '—'}
+              {' · '}
+              TTS {runtime?.cascade?.ttsProvider || '—'}
+              {' / '}
+              {runtime?.cascade?.tts || '—'}
             </p>
           )}
         </section>
 
         <section>
-          <h3>知识库（Markdown）</h3>
+          <h3>知识库（只读）</h3>
           <p>
-            固定问答资料放本地 <code>.md</code>；索引从 markdown 重建。
+            本地 <code>.md</code> 资料状态。导入与重建索引请用 CLI
+            （如知识目录落盘后由 Gateway 侧重建），此处不可编辑。
           </p>
           <p className="hint">
             {knowledge?.health?.knowledgeDir || '未配置'}
@@ -206,8 +231,13 @@ export default function RuntimeSettings({
         </section>
 
         <section>
-          <h3>朗读内容（Markdown）</h3>
-          <p>小说/讲稿放本地 <code>.md</code>；语音说「读/继续」控制进度。</p>
+          <h3>朗读内容（只读）</h3>
+          <p>
+            本地 <code>.md</code> 与朗读进度。导入用
+            {' '}
+            <code>npm run content:import</code>
+            ；进度靠语音「读/继续」控制，此处不可编辑。
+          </p>
           <p className="hint">
             {content?.health?.contentDir || '未配置'}
             {' · '}

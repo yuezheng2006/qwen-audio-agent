@@ -218,6 +218,7 @@
     "gateway:status": "node scripts/start-gateway.mjs status",
     "gateway:stop": "node scripts/start-gateway.mjs stop",
     "sync:upstream": "node scripts/sync-upstream.mjs",
+    "content:import": "node scripts/import-content.mjs",
     "desktop": "npm run start --workspace desktop",
     "test:desktop-smoke": "node scripts/electron-smoke.mjs",
     "desktop:build": "node scripts/check-desktop-release-env.mjs && npm run build && electron-builder --config desktop/electron-builder.yml --mac dmg zip",

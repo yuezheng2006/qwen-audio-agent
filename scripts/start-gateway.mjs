@@ -22,6 +22,7 @@ import {
 } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { listCascadeTtsPassthroughEnvKeys } from '../shared/cascade-tts-plugins.mjs'
 import { loadRuntimeEnvironment } from '../shared/runtime-environment.mjs'
 import {
   describeGatewayMode,
@@ -164,20 +165,23 @@ async function startGateway(modeArg) {
     ...process.env,
     ...modeEnv,
   }
-  // Config file wins for cascade TTS selection (Fish free-month testing etc.).
+  // Capability keys from config.env (WeRead panel, shared DashScope, etc.)
+  for (const key of [
+    'WEREAD_API_KEY',
+    'DASHSCOPE_API_KEY',
+    'QWEN_AUDIO_REALTIME_API_KEY',
+    'MINERU_API_URL',
+    'CONTENT_DIR',
+    'KNOWLEDGE_DIR',
+  ]) {
+    if (fileEnv[key] !== undefined && fileEnv[key] !== '') {
+      childEnv[key] = fileEnv[key]
+    }
+  }
+  // Config file wins for cascade TTS selection. Keys come from the plugin
+  // registry so new suppliers do not require start-gateway edits.
   if (mode === 'cascade') {
-    for (const key of [
-      'CASCADE_TTS_PROVIDER',
-      'CASCADE_TTS_MODEL',
-      'CASCADE_TTS_VOICE_ID',
-      'CASCADE_TTS_API_KEY',
-      'FISH_API_KEY',
-      'FISH_REFERENCE_ID',
-      'FISH_TTS_MODEL',
-      'FISH_TTS_LATENCY',
-      'FISH_API_BASE_URL',
-      'VOICEBOX_BASE_URL',
-    ]) {
+    for (const key of listCascadeTtsPassthroughEnvKeys()) {
       if (fileEnv[key] !== undefined && fileEnv[key] !== '') {
         childEnv[key] = fileEnv[key]
       }

@@ -1,6 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
+import {
+  resolveCascadeTtsProviderId,
+  resolvePreservedCascadeTtsEnv,
+} from '../../shared/cascade-tts-plugins.mjs'
 import { userConfigDirectory } from '../../shared/runtime-environment.mjs'
 import { resolveGatewayMode, resolveGatewayModeEnv } from './gateway-mode.mjs'
 
@@ -47,17 +51,6 @@ export function readEnvFile(filePath) {
   return out
 }
 
-function normalizeTtsProvider(raw) {
-  const key = String(raw || '').trim().toLowerCase()
-  if (key === 'fish' || key === 'fishaudio' || key === 'fish-audio') return 'fish'
-  return key
-}
-
-/** Alternate cascade TTS backends keep their model/voice across mode flips. */
-function isAlternateCascadeTts(provider) {
-  return provider === 'fish' || provider === 'voicebox'
-}
-
 export function persistGatewayMode(modeOrAlias, {
   configPath = resolveUserConfigPath(),
   env = process.env,
@@ -76,22 +69,15 @@ export function persistGatewayMode(modeOrAlias, {
       || fileEnv.CASCADE_STT_MODEL
       || 'qwen-audio-3.0-asr-flash-streaming'
     )
-    const provider = normalizeTtsProvider(
+    const provider = resolveCascadeTtsProviderId(
       env.CASCADE_TTS_PROVIDER || fileEnv.CASCADE_TTS_PROVIDER || 'dashscope',
     )
-    if (isAlternateCascadeTts(provider)) {
-      // Keep Fish / VoiceBox testing setup; do not force Qwen fengge defaults.
-      updates.CASCADE_TTS_PROVIDER = provider
-      const model = env.CASCADE_TTS_MODEL || fileEnv.CASCADE_TTS_MODEL
-        || (provider === 'fish'
-          ? (env.FISH_TTS_MODEL || fileEnv.FISH_TTS_MODEL || 's2.1-pro-free')
-          : undefined)
-      const voice = env.CASCADE_TTS_VOICE_ID
-        || fileEnv.CASCADE_TTS_VOICE_ID
-        || env.FISH_REFERENCE_ID
-        || fileEnv.FISH_REFERENCE_ID
-      if (model) updates.CASCADE_TTS_MODEL = model
-      if (voice) updates.CASCADE_TTS_VOICE_ID = voice
+    const preserved = resolvePreservedCascadeTtsEnv(provider, {
+      ...fileEnv,
+      ...env,
+    })
+    if (preserved) {
+      Object.assign(updates, preserved)
     } else {
       updates.CASCADE_TTS_PROVIDER = 'dashscope'
       updates.CASCADE_TTS_MODEL = modeEnv.CASCADE_TTS_MODEL

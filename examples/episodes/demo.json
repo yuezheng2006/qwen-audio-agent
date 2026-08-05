@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "episodes": [
+    {
+      "id": "ep-demo-shanghai",
+      "at": 1754294400000,
+      "role": "user",
+      "content": "我下周要去上海出差，记得提醒我带充电器。",
+      "source": "auto",
+      "confidence": 0.5,
+      "ttlDays": 90
+    },
+    {
+      "id": "ep-demo-tea",
+      "at": 1754380800000,
+      "role": "user",
+      "content": "我更喜欢喝绿茶，别给我推荐咖啡。",
+      "source": "user",
+      "confidence": 0.9,
+      "ttlDays": 90
+    },
+    {
+      "id": "ep-demo-noise",
+      "at": 1754467200000,
+      "role": "user",
+      "content": "嗯嗯好的",
+      "source": "auto",
+      "confidence": 0.5,
+      "ttlDays": 90
+    }
+  ]
+}

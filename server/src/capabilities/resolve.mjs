@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { createCapabilityRegistry } from './registry.mjs'
 import { createWebSearchTool } from './tools/web-search.mjs'
 import { createWeatherTool } from './tools/weather.mjs'
+import { createEpisodeMemoryTools } from './tools/episode-memory.mjs'
 import { loadSkillsFromDir } from './skills/load-skills.mjs'
 import {
   buildMcpProjectedTools,
@@ -27,12 +28,20 @@ export async function resolveCapabilityRegistry(config = {}, {
   fetchImpl = globalThis.fetch,
   connectMcpServer = null,
   enableMcp = true,
+  episodeStore = null,
+  onEpisodeChanged = null,
 } = {}) {
   const registry = createCapabilityRegistry()
   const { skillsDir, mcpDir } = resolveCapabilitiesPaths(config)
 
   registry.registerTool(createWebSearchTool({ fetchImpl }))
   registry.registerTool(createWeatherTool({ fetchImpl }))
+  for (const tool of createEpisodeMemoryTools({
+    episodeStore,
+    onChanged: onEpisodeChanged,
+  })) {
+    registry.registerTool(tool)
+  }
 
   const bundledSkillsDir = config.root
     ? join(config.root, 'config/skills')

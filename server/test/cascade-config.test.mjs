@@ -72,7 +72,8 @@ test('the realtime override key also feeds cascade stages', () => {
 
 test('vad settings are numeric, clamped and default sensibly', () => {
   const defaults = resolveCascadeConfig({})
-  assert.equal(defaults.vad.threshold, 0.015)
+  assert.equal(defaults.vad.threshold, 0.04)
+  assert.equal(defaults.vad.minSpeechMs, 320)
   assert.equal(defaults.vad.silenceMs, 650)
   assert.equal(defaults.vad.maxSpeechMs, 12000)
   const custom = resolveCascadeConfig({

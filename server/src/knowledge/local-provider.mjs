@@ -116,6 +116,7 @@ export function createLocalKnowledgeProvider({
 
   const provider = {
     kind: 'local',
+    knowledgeDir,
     ingest({ kbId = defaultKbId } = {}) {
       return buildIndex(kbId)
     },

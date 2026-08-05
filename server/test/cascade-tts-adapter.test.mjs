@@ -50,6 +50,37 @@ test('the requested voice and sample rate reach the provider', async () => {
   await fake.close()
 })
 
+test('dashscope passes natural-language instruction and keeps inline tags in text', async () => {
+  let parameters
+  let model
+  const texts = []
+  const fake = await startFakeDashScope((action, payload, reply) => {
+    if (action === 'run-task') {
+      parameters = payload.parameters
+      model = payload.model
+      reply.event('task-started')
+    }
+    if (action === 'continue-task') texts.push(payload.input.text)
+    if (action === 'finish-task') reply.event('task-finished')
+  })
+  const synthesizer = createSynthesizer(
+    cascadeTestConfig(fake.url, {
+      tts: {
+        model: 'qwen-audio-3.0-tts-plus',
+        instruction: '慢一点，像讲睡前故事',
+      },
+    }),
+    {},
+  )
+  await synthesizer.start()
+  synthesizer.sendText('[whispers]先别吵醒他。')
+  await synthesizer.finish()
+  assert.equal(model, 'qwen-audio-3.0-tts-plus')
+  assert.equal(parameters.instruction, '慢一点，像讲睡前故事')
+  assert.deepEqual(texts, ['[whispers]先别吵醒他。'])
+  await fake.close()
+})
+
 test('abort silences audio immediately and unblocks finish', async () => {
   let replyRef
   const fake = await startFakeDashScope((action, _payload, reply) => {

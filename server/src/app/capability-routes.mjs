@@ -1,4 +1,8 @@
 import { maybeAwait } from '../conversation/memory/provider.mjs'
+import { importContentDocument } from '../voice/reader/ingest/import-content.mjs'
+import { createWereadClient } from '../voice/reader/weread/client.mjs'
+import { prepareAndSpeakWeread } from '../voice/reader/weread/speak.mjs'
+import { resolveCascadeConfig } from '../core/config.mjs'
 
 /**
  * Memory / knowledge / content HTTP seams used by WebUI and ops.
@@ -11,7 +15,12 @@ export function registerCapabilityRoutes(app, {
   readerProgressByOwner = new Map(),
   capabilityRegistry = null,
   getOwnerId = req => req.identity?.ownerId || 'anonymous',
+  importContent = importContentDocument,
+  wereadClient = null,
+  speakWeread = prepareAndSpeakWeread,
+  resolveCascade = resolveCascadeConfig,
 } = {}) {
+  const weread = wereadClient || createWereadClient()
   app.get('/api/memory', async (req, res) => {
     try {
       const memories = await maybeAwait(memoryStore.list(getOwnerId(req), {
@@ -121,6 +130,125 @@ export function registerCapabilityRoutes(app, {
       })
     } catch (error) {
       res.status(503).json({ error: error.message })
+    }
+  })
+
+  // Large-file ingest seam: MinerU parse → chapter md under CONTENT_DIR.
+  // Body uses an absolute local sourcePath (personal ops); no multipart dep.
+  app.post('/api/content/import', async (req, res) => {
+    try {
+      const sourcePath = String(req.body?.sourcePath || '').trim()
+      if (!sourcePath) {
+        return res.status(400).json({ error: 'sourcePath is required' })
+      }
+      const contentDir = contentStore?.contentDir
+      if (!contentDir) {
+        return res.status(503).json({ error: 'contentStore is not configured' })
+      }
+      const knowledgeDir = knowledgeStore?.knowledgeDir || ''
+      const indexKnowledge = req.body?.indexKnowledge === true
+      const result = await importContent({
+        sourcePath,
+        contentDir,
+        knowledgeDir,
+        title: String(req.body?.title || '').trim(),
+        indexKnowledge,
+        extractOptions: {
+          apiUrl: process.env.MINERU_API_URL || '',
+        },
+      })
+      if (indexKnowledge && knowledgeStore?.ingest) {
+        knowledgeStore.ingest({ kbId: req.body?.kbId || undefined })
+      }
+      res.json(result)
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.get('/api/weread/status', (_req, res) => {
+    res.json({
+      configured: Boolean(weread.configured),
+      skillVersion: weread.skillVersion || '1.0.4',
+    })
+  })
+
+  app.get('/api/weread/shelf', async (_req, res) => {
+    try {
+      const shelf = await weread.shelf()
+      let withNotes = []
+      try {
+        if (typeof weread.notebooks === 'function') {
+          const notebooks = await weread.notebooks({ count: 40 })
+          withNotes = (notebooks.books || [])
+            .filter(item => (item.noteCount || 0) + (item.reviewCount || 0) > 0)
+            .slice(0, 30)
+        }
+      } catch {
+        // notebooks optional; shelf still useful
+      }
+      res.json({ ...shelf, withNotes })
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.get('/api/weread/notebooks', async (_req, res) => {
+    try {
+      res.json(await weread.notebooks())
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.get('/api/weread/highlights', async (req, res) => {
+    try {
+      const bookId = String(req.query.bookId || '').trim()
+      if (!bookId) return res.status(400).json({ error: 'bookId is required' })
+      res.json(await weread.highlights(bookId))
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.get('/api/weread/reviews', async (req, res) => {
+    try {
+      const bookId = String(req.query.bookId || '').trim()
+      if (!bookId) return res.status(400).json({ error: 'bookId is required' })
+      res.json(await weread.reviews(bookId))
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.post('/api/weread/speak', async (req, res) => {
+    try {
+      const bookId = String(req.body?.bookId || '').trim()
+      if (!bookId) return res.status(400).json({ error: 'bookId is required' })
+      const mode = String(req.body?.mode || 'highlights').trim() || 'highlights'
+      if (!['highlights', 'reviews', 'mixed'].includes(mode)) {
+        return res.status(400).json({ error: 'mode must be highlights|reviews|mixed' })
+      }
+      const result = await speakWeread({
+        weread,
+        bookId,
+        mode,
+        itemIds: Array.isArray(req.body?.itemIds) ? req.body.itemIds : null,
+        persistContent: req.body?.persistContent === true,
+        contentDir: contentStore?.contentDir || '',
+        knowledgeDir: knowledgeStore?.knowledgeDir || '',
+        cascadeConfig: resolveCascade(process.env),
+        importContent,
+      })
+      if (result.truncated) res.setHeader('X-Weread-Truncated', '1')
+      res.setHeader('X-Weread-Title', encodeURIComponent(result.title || ''))
+      res.setHeader('X-Weread-Count', String(result.count || 0))
+      res.setHeader('Content-Type', 'audio/wav')
+      res.send(result.wav)
+    } catch (error) {
+      const message = String(error?.message || error)
+      const status = /没有可朗读|bookId is required|mode must/.test(message) ? 400 : 503
+      res.status(status).json({ error: message })
     }
   })
 
