@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { FENGGE_QWEN_TTS_VOICE } from '../../scripts/lib/gateway-mode.mjs'
 import {
+  persistCascadeTts,
   persistGatewayMode,
   upsertEnvFile,
 } from '../../scripts/lib/runtime-config-file.mjs'
@@ -39,6 +40,23 @@ test('persistGatewayMode writes s2s system voice', () => {
   const text = readFileSync(path, 'utf8')
   assert.match(text, /^QWEN_AUDIO_REALTIME_PROVIDER=dashscope$/m)
   assert.match(text, /^QWEN_AUDIO_REALTIME_VOICE=longanqian$/m)
+})
+
+test('persistCascadeTts writes provider model and voice', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'qwaudio-config-'))
+  const path = join(dir, 'config.env')
+  const result = persistCascadeTts({
+    provider: 'minimax',
+    model: 'speech-02-turbo',
+    voice: 'voice-abc',
+    configPath: path,
+    env: {},
+  })
+  assert.equal(result.provider, 'minimax')
+  const text = readFileSync(path, 'utf8')
+  assert.match(text, /^CASCADE_TTS_PROVIDER=minimax$/m)
+  assert.match(text, /^CASCADE_TTS_MODEL=speech-02-turbo$/m)
+  assert.match(text, /^CASCADE_TTS_VOICE_ID=voice-abc$/m)
 })
 
 test('persistGatewayMode preserves fish TTS during cascade restart', () => {

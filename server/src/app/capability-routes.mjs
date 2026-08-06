@@ -1,8 +1,28 @@
 import { maybeAwait } from '../conversation/memory/provider.mjs'
+import { isToolScope } from '../core/memory-scopes.mjs'
 import { importContentDocument } from '../voice/reader/ingest/import-content.mjs'
 import { createWereadClient } from '../voice/reader/weread/client.mjs'
 import { prepareAndSpeakWeread } from '../voice/reader/weread/speak.mjs'
 import { resolveCascadeConfig } from '../core/config.mjs'
+
+const MEMORY_WRITE_SCOPES = new Set(['profile', 'long_term', 'rules'])
+const REMINDER_KINDS = new Set(['reminder', 'scheduled_task'])
+const REMINDER_RECURRENCE = new Set(['once', 'daily', 'weekly', 'weekdays'])
+const CONTENT_ACTIONS = new Set([
+  'list',
+  'status',
+  'start_read',
+  'start_explain',
+  'pause',
+  'resume',
+  'stop',
+  'seek',
+])
+
+function memoryScopeOf(target) {
+  if (MEMORY_WRITE_SCOPES.has(target?.scope)) return target.scope
+  return 'long_term'
+}
 
 /**
  * Memory / knowledge / content HTTP seams used by WebUI and ops.
@@ -12,7 +32,10 @@ export function registerCapabilityRoutes(app, {
   memoryStore,
   knowledgeStore,
   contentStore,
+  notesStore = null,
+  taskManager = null,
   readerProgressByOwner = new Map(),
+  readerSessionsByOwner = new Map(),
   capabilityRegistry = null,
   getOwnerId = req => req.identity?.ownerId || 'anonymous',
   importContent = importContentDocument,
@@ -34,6 +57,48 @@ export function registerCapabilityRoutes(app, {
     }
   })
 
+  app.post('/api/memory', async (req, res) => {
+    const scope = String(req.body?.scope || 'long_term').trim().toLowerCase()
+    const content = String(req.body?.content || '').trim()
+    if (!MEMORY_WRITE_SCOPES.has(scope) || !isToolScope(scope)) {
+      return res.status(400).json({ error: 'scope must be profile|long_term|rules' })
+    }
+    if (!content) return res.status(400).json({ error: 'content is required' })
+    try {
+      const memory = await maybeAwait(memoryStore.remember(getOwnerId(req), {
+        scope,
+        content,
+      }))
+      res.status(201).json({ ok: true, memory })
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.patch('/api/memory/:id', async (req, res) => {
+    const id = String(req.params.id || '').trim()
+    const content = String(req.body?.content || '').trim()
+    if (!id) return res.status(400).json({ error: 'memory id is required' })
+    if (!content) return res.status(400).json({ error: 'content is required' })
+    try {
+      const memories = await maybeAwait(memoryStore.list(getOwnerId(req), {
+        scope: 'all',
+        limit: 64,
+      }))
+      const target = memories.find(memory => memory.id === id)
+      if (!target) return res.status(404).json({ error: 'memory not found' })
+      const scope = memoryScopeOf(target)
+      const result = await maybeAwait(memoryStore.replace(getOwnerId(req), {
+        scope,
+        ids: [id],
+        content,
+      }))
+      res.json({ ok: true, ...result, scope })
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
   app.delete('/api/memory/:id', async (req, res) => {
     const id = String(req.params.id || '').trim()
     if (!id) return res.status(400).json({ error: 'memory id is required' })
@@ -44,7 +109,7 @@ export function registerCapabilityRoutes(app, {
       }))
       const target = memories.find(memory => memory.id === id)
       if (!target) return res.status(404).json({ error: 'memory not found' })
-      const scope = target.scope === 'profile' ? 'profile' : 'long_term'
+      const scope = memoryScopeOf(target)
       const removed = await maybeAwait(memoryStore.forget(getOwnerId(req), {
         scope,
         query: id,
@@ -70,6 +135,179 @@ export function registerCapabilityRoutes(app, {
         all: true,
       }))
       res.json({ ok: true, removed })
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.get('/api/notes', (req, res) => {
+    if (!notesStore) return res.status(503).json({ error: 'notes unavailable' })
+    try {
+      const lists = notesStore.lists(getOwnerId(req))
+      res.json({ lists, count: lists.length, health: notesStore.health() })
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.get('/api/notes/:list', (req, res) => {
+    if (!notesStore) return res.status(503).json({ error: 'notes unavailable' })
+    try {
+      const list = decodeURIComponent(String(req.params.list || ''))
+      const result = notesStore.show(getOwnerId(req), list)
+      if (result.status === 'not_found') {
+        return res.status(404).json(result)
+      }
+      if (result.status === 'ambiguous') {
+        return res.status(409).json(result)
+      }
+      res.json(result)
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.post('/api/notes', (req, res) => {
+    if (!notesStore) return res.status(503).json({ error: 'notes unavailable' })
+    const action = String(req.body?.action || 'add').trim().toLowerCase()
+    const list = String(req.body?.list || '').trim()
+    const items = Array.isArray(req.body?.items)
+      ? req.body.items.map(item => String(item || '').trim()).filter(Boolean)
+      : []
+    if (!list) return res.status(400).json({ error: 'list is required' })
+    try {
+      const ownerId = getOwnerId(req)
+      let result
+      if (action === 'add') {
+        result = notesStore.add(ownerId, { list, items })
+      } else if (action === 'remove') {
+        result = notesStore.remove(ownerId, { list, items })
+      } else if (action === 'clear') {
+        result = notesStore.clear(ownerId, list)
+      } else if (action === 'drop') {
+        result = notesStore.drop(ownerId, list)
+      } else {
+        return res.status(400).json({ error: 'action must be add|remove|clear|drop' })
+      }
+      if (result.status === 'not_found') return res.status(404).json(result)
+      if (result.status === 'ambiguous' || result.status === 'list_full') {
+        return res.status(409).json(result)
+      }
+      res.json(result)
+    } catch (error) {
+      res.status(400).json({ error: error.message })
+    }
+  })
+
+  app.get('/api/reminders', (req, res) => {
+    if (!taskManager) return res.status(503).json({ error: 'reminders unavailable' })
+    try {
+      const reminders = taskManager.list({
+        ownerId: getOwnerId(req),
+        sessionId: req.query.sessionId,
+      }).filter(task => (
+        task.status === 'scheduled' && REMINDER_KINDS.has(task.kind)
+      ))
+      res.json({ reminders, count: reminders.length })
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.post('/api/reminders', (req, res) => {
+    if (!taskManager) return res.status(503).json({ error: 'reminders unavailable' })
+    const executeAt = Date.parse(req.body?.execute_at)
+    const reminder = String(req.body?.reminder || '').trim()
+    const recurrence = String(req.body?.recurrence || 'once').trim().toLowerCase()
+    if (!executeAt || executeAt <= Date.now()) {
+      return res.status(400).json({ error: 'execute_at must be a future ISO time' })
+    }
+    if (!reminder) return res.status(400).json({ error: 'reminder is required' })
+    if (!REMINDER_RECURRENCE.has(recurrence)) {
+      return res.status(400).json({ error: 'recurrence must be once|daily|weekly|weekdays' })
+    }
+    try {
+      const task = taskManager.createScheduled({
+        objective: reminder,
+        ownerId: getOwnerId(req),
+        sessionId: String(req.body?.sessionId || 'main'),
+        schedule: { at: executeAt, recurrence },
+        type: 'reminder',
+      })
+      res.status(201).json({ ok: true, reminder: task })
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.delete('/api/reminders/:id', async (req, res) => {
+    if (!taskManager) return res.status(503).json({ error: 'reminders unavailable' })
+    const id = String(req.params.id || '').trim()
+    if (!id) return res.status(400).json({ error: 'reminder id is required' })
+    try {
+      const existing = taskManager.get(id, { ownerId: getOwnerId(req) })
+      if (!existing) return res.status(404).json({ error: 'reminder not found' })
+      if (
+        existing.status !== 'scheduled'
+        || !REMINDER_KINDS.has(existing.kind)
+      ) {
+        return res.status(409).json({ error: 'task is not a scheduled reminder' })
+      }
+      const task = await taskManager.cancel(id, { ownerId: getOwnerId(req) })
+      if (!task) {
+        return res.status(409).json({ error: 'reminder could not be cancelled' })
+      }
+      res.json({ ok: true, reminder: task })
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.post('/api/content/control', async (req, res) => {
+    const action = String(req.body?.action || '').trim().toLowerCase()
+    if (!CONTENT_ACTIONS.has(action)) {
+      return res.status(400).json({
+        error: 'action must be list|status|start_read|start_explain|pause|resume|stop|seek',
+      })
+    }
+    const ownerId = getOwnerId(req)
+    const readerSession = readerSessionsByOwner.get(ownerId)
+    if (!readerSession && action !== 'list') {
+      return res.status(409).json({
+        error: '请先开启语音会话后再控制朗读',
+        status: 'reader_unavailable',
+      })
+    }
+    try {
+      if (action === 'list') {
+        const contents = readerSession?.listContents?.() || contentStore?.list?.() || []
+        return res.json({ status: 'ok', contents })
+      }
+      if (action === 'status') {
+        const progress = readerSession.snapshot()
+        readerProgressByOwner.set(ownerId, progress)
+        return res.json({ status: 'ok', progress })
+      }
+      let progress
+      if (action === 'start_read' || action === 'start_explain') {
+        progress = await readerSession.start(
+          action === 'start_read' ? 'read' : 'explain',
+          {
+            contentId: String(req.body?.content_id || '').trim(),
+            offset: Number(req.body?.offset) || 0,
+          },
+        )
+      } else if (action === 'pause') {
+        progress = readerSession.pause()
+      } else if (action === 'resume') {
+        progress = await readerSession.resume()
+      } else if (action === 'stop') {
+        progress = readerSession.stop()
+      } else if (action === 'seek') {
+        progress = await readerSession.seek(Number(req.body?.offset) || 0)
+      }
+      if (progress) readerProgressByOwner.set(ownerId, progress)
+      res.json({ status: 'ok', action, progress })
     } catch (error) {
       res.status(503).json({ error: error.message })
     }

@@ -6,6 +6,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { registerCapabilityRoutes } from '../src/app/capability-routes.mjs'
+import { FrontendNotesStore } from '../src/conversation/frontend-notes.mjs'
 import { resolveMemoryProvider } from '../src/conversation/memory/resolve.mjs'
 import { createLocalKnowledgeProvider } from '../src/knowledge/local-provider.mjs'
 import { MarkdownContentStore } from '../src/voice/reader/content-store.mjs'
@@ -25,9 +26,46 @@ async function withApp(setup, run) {
   mkdirSync(contentDir)
   writeFileSync(join(contentDir, 'ch1.md'), '# 第一章\n\n夜色渐浓。\n')
   const contentStore = new MarkdownContentStore({ contentDir })
+  const notesStore = new FrontendNotesStore({
+    filePath: join(root, 'notes.json'),
+  })
+  const scheduled = new Map()
+  const taskManager = {
+    list({ ownerId } = {}) {
+      return [...scheduled.values()].filter(task => (
+        ownerId === undefined || task.ownerId === ownerId
+      ))
+    },
+    get(id, { ownerId } = {}) {
+      const task = scheduled.get(String(id))
+      if (!task) return null
+      if (ownerId !== undefined && task.ownerId !== ownerId) return null
+      return task
+    },
+    createScheduled({ objective, ownerId, schedule, type = 'reminder' }) {
+      const task = {
+        id: `work_test_${scheduled.size + 1}`,
+        status: 'scheduled',
+        kind: type === 'task' ? 'scheduled_task' : 'reminder',
+        objective,
+        ownerId,
+        schedule: { type: 'at', at: schedule.at, recurrence: schedule.recurrence },
+        createdAt: Date.now(),
+      }
+      scheduled.set(task.id, task)
+      return task
+    },
+    async cancel(id, { ownerId } = {}) {
+      const task = this.get(id, { ownerId })
+      if (!task || task.status !== 'scheduled') return null
+      task.status = 'cancelled'
+      return task
+    },
+  }
   const readerProgressByOwner = new Map([
     ['owner-a', { status: 'paused', index: 2, total: 5 }],
   ])
+  const readerSessionsByOwner = new Map()
 
   const app = express()
   app.use(express.json())
@@ -48,10 +86,22 @@ async function withApp(setup, run) {
     memoryStore,
     knowledgeStore,
     contentStore,
+    notesStore,
+    taskManager,
     readerProgressByOwner,
+    readerSessionsByOwner,
     capabilityRegistry,
   }
-  setup?.({ memoryStore, knowledgeStore, contentStore, root, routeDeps })
+  setup?.({
+    memoryStore,
+    knowledgeStore,
+    contentStore,
+    notesStore,
+    taskManager,
+    readerSessionsByOwner,
+    root,
+    routeDeps,
+  })
   registerCapabilityRoutes(app, routeDeps)
 
   const server = createServer(app)
@@ -59,12 +109,20 @@ async function withApp(setup, run) {
   const { port } = server.address()
   const base = `http://127.0.0.1:${port}`
   try {
-    await run({ base, memoryStore, knowledgeStore, contentStore, root })
+    await run({
+      base,
+      memoryStore,
+      knowledgeStore,
+      contentStore,
+      notesStore,
+      taskManager,
+      readerSessionsByOwner,
+      root,
+    })
   } finally {
     await new Promise(resolve => server.close(resolve))
   }
 }
-
 async function request(base, path, options = {}) {
   const response = await fetch(`${base}${path}`, {
     ...options,
@@ -262,5 +320,94 @@ test('memory list/delete and content reader progress work', async () => {
     const capabilities = await request(base, '/api/capabilities')
     assert.equal(capabilities.status, 200)
     assert.equal(capabilities.payload.toolCount, 1)
+  })
+})
+
+test('memory write/patch notes reminders and content control', async () => {
+  await withApp(({ readerSessionsByOwner }) => {
+    readerSessionsByOwner.set('owner-a', {
+      listContents: () => [{ id: 'ch1', title: '第一章' }],
+      snapshot: () => ({ status: 'reading', index: 1, total: 3 }),
+      async start(mode, opts) {
+        return { status: mode, index: opts.offset || 0, total: 3 }
+      },
+      pause: () => ({ status: 'paused', index: 1, total: 3 }),
+      async resume() { return { status: 'reading', index: 1, total: 3 } },
+      stop: () => ({ status: 'idle', index: 0, total: 3 }),
+      async seek(offset) { return { status: 'paused', index: offset, total: 3 } },
+    })
+  }, async ({ base }) => {
+    const created = await request(base, '/api/memory', {
+      method: 'POST',
+      body: JSON.stringify({ scope: 'rules', content: '以后叫我峰哥' }),
+    })
+    assert.equal(created.status, 201)
+    assert.equal(created.payload.memory.scope, 'rules')
+    const memoryId = created.payload.memory.id
+
+    const patched = await request(base, `/api/memory/${encodeURIComponent(memoryId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content: '以后都叫我峰哥' }),
+    })
+    assert.equal(patched.status, 200)
+
+    const notesAdd = await request(base, '/api/notes', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'add',
+        list: '购物',
+        items: ['牛奶', '面包'],
+      }),
+    })
+    assert.equal(notesAdd.status, 200)
+    assert.equal(notesAdd.payload.status, 'ok')
+
+    const notesList = await request(base, '/api/notes')
+    assert.equal(notesList.status, 200)
+    assert.ok(notesList.payload.lists.some(item => item.list === '购物'))
+
+    const shown = await request(base, `/api/notes/${encodeURIComponent('购物')}`)
+    assert.equal(shown.status, 200)
+    assert.equal(shown.payload.items.length, 2)
+
+    const when = new Date(Date.now() + 60_000).toISOString()
+    const reminder = await request(base, '/api/reminders', {
+      method: 'POST',
+      body: JSON.stringify({
+        execute_at: when,
+        reminder: '喝水',
+        recurrence: 'once',
+      }),
+    })
+    assert.equal(reminder.status, 201)
+    const reminderId = reminder.payload.reminder.id
+
+    const reminders = await request(base, '/api/reminders')
+    assert.equal(reminders.status, 200)
+    assert.equal(reminders.payload.count, 1)
+
+    const cancelled = await request(base, `/api/reminders/${encodeURIComponent(reminderId)}`, {
+      method: 'DELETE',
+    })
+    assert.equal(cancelled.status, 200)
+    assert.equal(cancelled.payload.reminder.status, 'cancelled')
+
+    const paused = await request(base, '/api/content/control', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'pause' }),
+    })
+    assert.equal(paused.status, 200)
+    assert.equal(paused.payload.progress.status, 'paused')
+  })
+})
+
+test('content control requires active reader session', async () => {
+  await withApp(null, async ({ base }) => {
+    const result = await request(base, '/api/content/control', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'pause' }),
+    })
+    assert.equal(result.status, 409)
+    assert.match(result.payload.error, /语音会话/)
   })
 })

@@ -51,6 +51,29 @@ export function readEnvFile(filePath) {
   return out
 }
 
+export function persistCascadeTts({
+  provider,
+  model,
+  voice,
+  configPath = resolveUserConfigPath(),
+  env = process.env,
+} = {}) {
+  const providerId = resolveCascadeTtsProviderId(
+    provider || env.CASCADE_TTS_PROVIDER || 'dashscope',
+  )
+  const updates = {
+    CASCADE_TTS_PROVIDER: providerId,
+  }
+  if (model !== undefined && model !== null) {
+    updates.CASCADE_TTS_MODEL = String(model).trim()
+  }
+  if (voice !== undefined && voice !== null) {
+    updates.CASCADE_TTS_VOICE_ID = String(voice).trim()
+  }
+  upsertEnvFile(configPath, updates)
+  return { provider: providerId, configPath, updates }
+}
+
 export function persistGatewayMode(modeOrAlias, {
   configPath = resolveUserConfigPath(),
   env = process.env,
