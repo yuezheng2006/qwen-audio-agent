@@ -1,0 +1,94 @@
+<title>qwen-audio-agent Fork：核心架构与多客户端语音层</title>
+<callout emoji="bulb" background-color="light-blue">
+<p>本文介绍我们基于 <a href="https://github.com/QwenAudio/qwen-audio-agent">QwenAudio/qwen-audio-agent</a> 的 fork（产品分支 <code>fengge-cascade</code>）：如何用统一 Gateway 给 Coding Agent 装上「对话不断线」的实时语音层，以及为何这套分层适合后续多客户端接入。</p>
+</callout>
+<h1>1. 一句话定位</h1>
+<p>给主流后台 Agent（Claude Code / Codex / OpenCode / ACP 通用）加一层<strong>全双工实时语音入口</strong>：简单问题当场答，复杂工作交给后端 Agent，结果在安全窗口播报回来——用户始终只对一个助手说话。</p>
+<ul>
+<li>仓库：<a href="https://github.com/yuezheng2006/qwen-audio-agent">yuezheng2006/qwen-audio-agent</a>（upstream 同步官方）</li>
+<li>个人机默认：Cascade（STT → LLM → TTS）+ 插件化音色</li>
+<li>已有客户端：WebUI、终端 TUI、macOS Desktop；规划中：Android SDK / App</li>
+</ul>
+<h1>2. 核心架构与分层</h1>
+<p>fork 继承上游三层边界，并在语音前台强化 Cascade、能力层与休眠唤醒。</p>
+<h2>2.1 三层模型</h2>
+<ol>
+<li><b>客户端层</b>：WebUI / TUI / Desktop /（未来）Android —— 只做采集、播放与呈现</li>
+<li><b>Gateway 层</b>：Realtime WS、Cascade Provider、TaskManager、Announcement、Sleep/Wake —— 唯一核心产品服务</li>
+<li><b>Backend Agent 层</b>：经 ACP 执行工具与长任务 —— 会话策略由后端自持</li>
+</ol>
+<p><b>硬不变式：对话永不因工作阻塞。</b><code>spawn_thinking</code> 立刻返回；Work 按 owner FIFO；结果经 AnnouncementWindow 在安全停顿注入。</p>
+<p>（配图：三层架构 · 小石头手绘）</p>
+<h2>2.2 Cascade 语音流水线</h2>
+<p>默认路径不是把一切塞进单一 S2S 模型，而是可替换的级联：</p>
+<ul>
+<li>STT：如 <code>fun-asr-realtime</code></li>
+<li>LLM：如 <code>qwen-flash</code></li>
+<li>TTS：DashScope / Fish / ListenHub / MiniMax / VoiceBox 等插件</li>
+</ul>
+<p>工程要点：能量 VAD、句边界闸门、soft barge-in、TTS 串行发送。S2S 仅作旁路体验，不作为默认克隆音色路径。</p>
+<p>（配图：级联流水线 · 小石头手绘）</p>
+<h2>2.3 Gateway 内部关键模块</h2>
+<ul>
+<li><b>Realtime Gateway</b>：统一事件协议（connect / audio.append / interrupt / voice.sleep…）</li>
+<li><b>Task Manager</b>：排队、调度、取消、进度</li>
+<li><b>Announcement</b>：任务完成播报与确认</li>
+<li><b>Sleep / Wake</b>：空闲休眠 + 本地 sherpa-onnx 唤醒词（「你好千问」），休眠期无云端 ASR</li>
+<li><b>Capabilities</b>：同步工具、Skills、MCP 白名单投影</li>
+</ul>
+<h1>3. 实用性：Agent 能干什么</h1>
+<ul>
+<li><b>边聊边干活</b>：委派代码/检索/系统操作时，语音通道不冻结</li>
+<li><b>权限可读可回</b>：后端权限请求可回到语音会话确认</li>
+<li><b>记忆与情节</b>：长期画像 + 情节记忆粗记/纠正；不默认污染 long_term</li>
+<li><b>阅读与知识</b>：WereYou/内容阅读、本地 knowledge_search；知识库增强可旁路 WeKnora</li>
+<li><b>定时与进度</b>：提醒调度、任务进度查询与取消</li>
+</ul>
+<callout emoji="zap" background-color="light-yellow">
+<p>实用边界：Gateway 不替后端选工具或执行策略；前端工具保持「短、同步、非阻塞」，重活一律 spawn。</p>
+</callout>
+<h1>4. 适用性：什么场景最合适</h1>
+<table>
+<thead>
+<tr><th>场景</th><th>适合度</th><th>说明</th></tr>
+</thead>
+<tbody>
+<tr><td>Coding Agent 语音副驾</td><td>高</td><td>Claude Code / Codex / OpenCode 等 ACP 后端</td></tr>
+<tr><td>桌面常驻语音助手</td><td>高</td><td>Electron 悬浮球 + 内嵌 Gateway + 唤醒词</td></tr>
+<tr><td>人设 / 复刻音色对话</td><td>中高</td><td>Cascade TTS 插件化；峰哥等 persona 可换缝</td></tr>
+<tr><td>纯企业客服电话栈</td><td>中</td><td>可借鉴流水线，但本仓重心是 Agent 委派</td></tr>
+<tr><td>统一原生 S2S 替换一切</td><td>低（当前）</td><td>观察 Nemotron VoiceChat 等；主路径仍 cascade</td></tr>
+</tbody>
+</table>
+<h1>5. 拓展性：加法插槽</h1>
+<p>设计原则：<b>底座不认供应商</b>，新能力优先注册插件 / Provider，不改 Gateway 核心状态机。</p>
+<ul>
+<li><b>TTS 插件表</b>：<code>shared/cascade-tts-plugins.mjs</code> + adapter</li>
+<li><b>Capabilities / Skills / MCP</b>：前台同步工具与白名单投影</li>
+<li><b>Memory Provider</b>：local / openviking / evermind / mem0…</li>
+<li><b>Backend Driver</b>：ACP 目录可扩展协议</li>
+<li><b>客户端</b>：只要吃同一套 Realtime WS + HTTP，即可新接入</li>
+</ul>
+<p>（配图：可拓展插槽 · 小石头手绘）</p>
+<h1>6. 多客户端接入路线</h1>
+<p>目标形态：<b>Agent / Gateway 平台无关 + SDK 吃协议 + App 只做设备与 UI</b>。</p>
+<ul>
+<li>已有：WebUI、TUI（macOS AEC 全双工）、Desktop Orb</li>
+<li>进行中：Android Demo（SDK + Compose PTT）</li>
+<li>协议锚点：<code>/api/realtime</code> + <code>shared/realtime-events.mjs</code>；语音仲裁保证每 owner 一个活跃麦</li>
+</ul>
+<p>（配图：多客户端接入 · 小石头手绘）</p>
+<h1>7. 与官方 Upstream 的关系</h1>
+<ul>
+<li><code>main</code> 跟官方；产品能力落在 <code>fengge-cascade</code></li>
+<li>日常 <code>npm run sync:upstream</code>（默认 rebase）吸收上游三层/ACP/播报能力</li>
+<li>fork 增量：Cascade 默认、TTS 插件、唤醒词休眠、情节记忆、Weread、能力层等</li>
+</ul>
+<h1>8. 下一步</h1>
+<ul>
+<li>多客户端：Android SDK 能力对齐 Desktop（权限 UI、任务卡、唤醒策略）</li>
+<li>体验：任务等待期 on-hold 垫话（对照 VoiceChat UX，不换栈）</li>
+<li>知识：WeKnora + document-buddy 旁路落地评估</li>
+</ul>
+<hr/>
+<p>配图：小石头（scene-skill-core / default-little-stone）手绘白板图。文档面向内部对齐与多端接入说明，非对外营销稿。</p>
