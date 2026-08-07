@@ -1,6 +1,7 @@
 # Voice Studio 工具能力（通用 VoiceProfile + 云端 Clone）
 
 日期：2026-08-07  
+实现计划：[2026-08-07-voice-studio-tools.md](../plans/2026-08-07-voice-studio-tools.md)  
 参考：[6174/recut-audio-studio](https://github.com/6174/recut-audio-studio)（转写 / 声音角色 / 配音契约）  
 约束：工具与存储尽量通用；厂商差异关在 adapter；**不破**现有 cascade TTS 重启切换协议。
 
