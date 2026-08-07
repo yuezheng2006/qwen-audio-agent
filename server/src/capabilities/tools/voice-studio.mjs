@@ -43,12 +43,13 @@ const VOICE_INPUT_PROPERTIES = {
   label: { type: 'string', description: '给这条音色起的名称。' },
   preset_id: { type: 'string', description: '演示音色 id。' },
   sample_url: { type: 'string', description: '可访问的音频样本 URL。' },
+  sample_path: { type: 'string', description: '本机音频样本路径。' },
   target_model: { type: 'string', description: '供应商目标 TTS 模型。' },
 }
 
 const CLONE_DEFINITION = definition(
   VOICE_CLONE_TOOL_NAME,
-  '用用户提供的样本或演示音色创建一条新音色。用户说「克隆我的声音」「做一个旁白音色」时调用。',
+  '用 preset_id、sample_url 或 sample_path 之一创建新音色。用户说「克隆我的声音」「做一个旁白音色」时调用。',
   VOICE_INPUT_PROPERTIES,
 )
 

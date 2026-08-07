@@ -28,9 +28,13 @@ test('voice tools list presets and clone via service', async () => {
   assert.equal('path' in presets.presets[0], false)
   assert.equal('sample' in presets.presets[0], false)
 
-  const cloned = await clone.handler({ preset_id: 'calm' }, { ownerId: 'o' })
+  const cloned = await clone.handler({
+    preset_id: 'calm',
+    sample_path: '/tmp/sample.wav',
+  }, { ownerId: 'o' })
   assert.equal(cloned.status, 'ok')
   assert.equal(cloned.ownerId, 'o')
+  assert.equal(cloned.args.sample_path, '/tmp/sample.wav')
 })
 
 test('voice_confirm without owner fails', async () => {
@@ -51,4 +55,11 @@ test('voice studio exposes exactly six realtime tools', () => {
     'voice_list',
     'voice_status',
   ])
+})
+
+test('voice_clone definition includes local sample_path', () => {
+  const clone = createVoiceStudioTools({ service: fakeService })
+    .find(tool => tool.name === 'voice_clone')
+
+  assert.ok(clone.definition.function.parameters.properties.sample_path)
 })
