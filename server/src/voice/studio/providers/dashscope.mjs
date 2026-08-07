@@ -131,13 +131,13 @@ export function createDashScopeCloneProvider({
       }
     },
 
-    async importId({
-      remoteId,
-      targetModel: requestedTargetModel,
-    } = {}) {
+    async importId(input = {}) {
+      const { remoteId, targetModel: requestedTargetModel } = input
       return {
         remoteId: requireRemoteId(remoteId),
-        targetModel: String(requestedTargetModel || configuredTargetModel),
+        ...(Object.prototype.hasOwnProperty.call(input, 'targetModel')
+          ? { targetModel: String(requestedTargetModel || '') }
+          : {}),
         providerPayload: { imported: true },
       }
     },

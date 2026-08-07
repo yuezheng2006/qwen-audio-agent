@@ -29,8 +29,8 @@ export function sanitizeLabel(label, fallback = 'voice') {
 }
 
 export function requireRemoteId(remoteId) {
-  const value = String(remoteId || '').trim()
-  if (!value) throw new Error('remoteId is required')
+  const value = String(remoteId || '')
+  if (!value.trim()) throw new Error('remoteId is required')
   return value
 }
 

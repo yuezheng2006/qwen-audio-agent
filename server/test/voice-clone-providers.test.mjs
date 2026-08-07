@@ -7,6 +7,7 @@ import {
 import {
   createListenHubCloneProvider,
 } from '../src/voice/studio/providers/listenhub.mjs'
+import { requireRemoteId } from '../src/voice/studio/providers/contract.mjs'
 
 test('listenhub cannot enroll but can import id', async () => {
   const p = createListenHubCloneProvider()
@@ -81,6 +82,27 @@ test('dashscope importId validates and echoes remoteId', async () => {
   await assert.rejects(
     () => p.importId({ label: 'demo', remoteId: ' ' }),
     /remoteId|required/i,
+  )
+})
+
+test('requireRemoteId preserves opaque whitespace after validation', () => {
+  const remoteId = '  voice id with spaces  '
+
+  assert.equal(requireRemoteId(remoteId), remoteId)
+})
+
+test('dashscope importId omits targetModel when caller does not provide it', async () => {
+  const p = createDashScopeCloneProvider({
+    apiKey: 'sk-test',
+    targetModel: 'configured-model',
+  })
+
+  assert.deepEqual(
+    await p.importId({ label: 'demo', remoteId: 'voice-123' }),
+    {
+      remoteId: 'voice-123',
+      providerPayload: { imported: true },
+    },
   )
 })
 
