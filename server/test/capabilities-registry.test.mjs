@@ -251,3 +251,29 @@ test('resolveCapabilityRegistry registers web_search and weather', async () => {
   assert.ok(registry.has('weather'))
   assert.ok(registry.health().toolCount >= 2)
 })
+
+test('resolveCapabilityRegistry only registers voice studio when enabled with service', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'qwaudio-voice-caps-'))
+  const base = {
+    capabilitiesDir: root,
+    skillsDir: join(root, 'skills'),
+    mcpDir: join(root, 'mcp'),
+    mcpServersJson: '',
+  }
+  const voiceStudioService = {}
+  const enabled = await resolveCapabilityRegistry(base, {
+    enableMcp: false,
+    voiceStudioService,
+  })
+  assert.ok(enabled.has('voice_list_presets'))
+  assert.ok(enabled.has('voice_status'))
+
+  const disabled = await resolveCapabilityRegistry(
+    { ...base, voiceStudioEnabled: false },
+    { enableMcp: false, voiceStudioService },
+  )
+  assert.equal(disabled.has('voice_list_presets'), false)
+
+  const withoutService = await resolveCapabilityRegistry(base, { enableMcp: false })
+  assert.equal(withoutService.has('voice_list_presets'), false)
+})
