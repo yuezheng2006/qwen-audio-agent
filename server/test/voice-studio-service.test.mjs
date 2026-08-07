@@ -237,6 +237,26 @@ test('confirm fails without a matching profile and never persists', async () => 
   }
 })
 
+test('audio_transcribe returns asr_unavailable when no backend', async () => {
+  const { dir, catalog, store } = setup()
+  try {
+    const service = createVoiceStudioService({
+      store,
+      catalog,
+      providers: new Map(),
+    })
+    const out = await service.transcribe('owner', {
+      source: { kind: 'url', url: 'https://example.com/a.wav' },
+      language: 'zh',
+      provider: 'auto',
+    })
+    assert.equal(out.error_code, 'asr_unavailable')
+    assert.equal(out.status, 'failed')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('sample resolver rejects symlink paths escaping an allowed root', () => {
   const dir = mkdtempSync(join(tmpdir(), 'voice-sample-'))
   const outside = mkdtempSync(join(tmpdir(), 'voice-outside-'))

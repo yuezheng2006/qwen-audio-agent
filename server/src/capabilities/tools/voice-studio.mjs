@@ -4,6 +4,7 @@ export const VOICE_IMPORT_TOOL_NAME = 'voice_import'
 export const VOICE_CONFIRM_TOOL_NAME = 'voice_confirm'
 export const VOICE_LIST_TOOL_NAME = 'voice_list'
 export const VOICE_STATUS_TOOL_NAME = 'voice_status'
+export const AUDIO_TRANSCRIBE_TOOL_NAME = 'audio_transcribe'
 
 const names = [
   VOICE_LIST_PRESETS_TOOL_NAME,
@@ -12,6 +13,7 @@ const names = [
   VOICE_CONFIRM_TOOL_NAME,
   VOICE_LIST_TOOL_NAME,
   VOICE_STATUS_TOOL_NAME,
+  AUDIO_TRANSCRIBE_TOOL_NAME,
 ]
 
 function definition(name, description, properties, required = []) {
@@ -88,6 +90,26 @@ const STATUS_DEFINITION = definition(
   VOICE_STATUS_TOOL_NAME,
   '查看当前正在使用的声音，以及最近确认的 Voice Studio 音色。',
   {},
+)
+
+const TRANSCRIBE_DEFINITION = definition(
+  AUDIO_TRANSCRIBE_TOOL_NAME,
+  '将音频转写为文字。当前仅在配置云端 ASR 后端时可用。',
+  {
+    source: {
+      type: 'object',
+      description: '音频来源，支持 URL 或本机路径。',
+      properties: {
+        kind: { type: 'string', enum: ['url', 'file'] },
+        url: { type: 'string' },
+        path: { type: 'string' },
+      },
+      additionalProperties: false,
+    },
+    language: { type: 'string', description: '音频语言，例如 zh、en。' },
+    provider: { type: 'string', description: 'ASR 供应商，例如 auto、dashscope。' },
+  },
+  ['source'],
 )
 
 function missingOwner(message) {
@@ -174,6 +196,15 @@ export function createVoiceStudioTools({ service } = {}) {
       handler: async (_args = {}, context = {}) => {
         const owner = ownerRequired(context, '无法查看音色状态。')
         return owner.error || service.status(owner.ownerId)
+      },
+    },
+    {
+      name: AUDIO_TRANSCRIBE_TOOL_NAME,
+      definition: TRANSCRIBE_DEFINITION,
+      source: 'capability',
+      handler: async (args = {}, context = {}) => {
+        const owner = ownerRequired(context, '无法转写音频。')
+        return owner.error || service.transcribe(owner.ownerId, args)
       },
     },
   ]

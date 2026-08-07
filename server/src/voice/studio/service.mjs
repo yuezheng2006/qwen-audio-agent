@@ -1,4 +1,5 @@
 import { createSampleResolver } from './sample-resolver.mjs'
+import { createAsrService } from './asr.mjs'
 import { normalizeProviderError, sanitizeLabel } from './providers/contract.mjs'
 import { serializeProfile } from './types.mjs'
 
@@ -23,6 +24,7 @@ export function createVoiceStudioService({
   restartGateway = () => {},
   defaultProvider,
   sampleResolver = createSampleResolver({ catalog }),
+  asr = createAsrService(),
 } = {}) {
   if (!store) throw new Error('voice profile store is required')
   if (!catalog) throw new Error('preset catalog is required')
@@ -176,6 +178,15 @@ export function createVoiceStudioService({
 
     clone,
     importVoice,
+
+    async transcribe(ownerId, input = {}) {
+      return asr.transcribe({
+        ownerId,
+        source: input.source,
+        language: input.language,
+        provider: input.provider || 'auto',
+      })
+    },
 
     async confirm(ownerId, input = {}) {
       let profile = input.profile_id ? store.get(ownerId, input.profile_id) : null

@@ -15,6 +15,7 @@ const fakeService = {
   confirm: async (ownerId, args) => ({ status: 'ok', ownerId, args }),
   list: async (ownerId, args) => ({ status: 'ok', ownerId, args, profiles: [] }),
   status: async ownerId => ({ status: 'ok', ownerId, confirmed: null }),
+  transcribe: async (ownerId, args) => ({ status: 'ok', ownerId, args }),
 }
 
 test('voice tools list presets and clone via service', async () => {
@@ -45,7 +46,7 @@ test('voice_confirm without owner fails', async () => {
   assert.equal(out.error_code, 'missing_owner')
 })
 
-test('voice studio exposes exactly six realtime tools', () => {
+test('voice studio exposes exactly seven realtime tools', () => {
   const names = createVoiceStudioTools({ service: fakeService }).map(tool => tool.name)
   assert.deepEqual(names, [
     'voice_list_presets',
@@ -54,7 +55,24 @@ test('voice studio exposes exactly six realtime tools', () => {
     'voice_confirm',
     'voice_list',
     'voice_status',
+    'audio_transcribe',
   ])
+})
+
+test('audio_transcribe requires owner and delegates to service', async () => {
+  const tools = createVoiceStudioTools({ service: fakeService })
+  const transcribe = tools.find(tool => tool.name === 'audio_transcribe')
+  const missingOwner = await transcribe.handler({ source: { kind: 'url', url: 'https://example.com/a.wav' } }, {})
+  assert.equal(missingOwner.error_code, 'missing_owner')
+
+  const out = await transcribe.handler({
+    source: { kind: 'url', url: 'https://example.com/a.wav' },
+    language: 'zh',
+    provider: 'auto',
+  }, { ownerId: 'o' })
+  assert.equal(out.status, 'ok')
+  assert.equal(out.ownerId, 'o')
+  assert.equal(out.args.language, 'zh')
 })
 
 test('voice_clone definition includes local sample_path', () => {
