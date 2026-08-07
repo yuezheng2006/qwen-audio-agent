@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { createVoiceProfileStore } from '../src/voice/studio/profile-store.mjs'
 import { createSampleResolver } from '../src/voice/studio/sample-resolver.mjs'
 import { createVoiceStudioService } from '../src/voice/studio/service.mjs'
+import { serializeProfile } from '../src/voice/studio/types.mjs'
 
 function setup() {
   const dir = mkdtempSync(join(tmpdir(), 'voice-studio-'))
@@ -49,6 +50,7 @@ test('clone preset with mock provider then confirm persists voice', async () => 
     assert.equal(cloned.status, 'ok')
     assert.equal(cloned.profile.status, 'ready')
     assert.equal(cloned.profile.remote_voice_id, 'v1')
+    assert.equal(cloned.profile.label, '测试音色')
 
     const confirmed = await service.confirm('owner', { profile_id: cloned.profile.id })
     assert.equal(confirmed.status, 'ok')
@@ -57,6 +59,115 @@ test('clone preset with mock provider then confirm persists voice', async () => 
       ['persist', { provider: 'dashscope', voice: 'v1' }],
       ['restart', undefined],
     ])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('service default resolver accepts a real file under the configured presets directory', async () => {
+  const dir = mkdtempSync(join(process.cwd(), '.voice-presets-'))
+  const presetsDir = join(dir, 'presets')
+  const samplePath = join(presetsDir, 'samples', 'demo.wav')
+  mkdirSync(join(presetsDir, 'samples'), { recursive: true })
+  writeFileSync(samplePath, Buffer.from('RIFFdemo'))
+  const catalog = {
+    list: () => [],
+    resolveSamplePath: id => id === 'demo' ? samplePath : null,
+  }
+  const store = createVoiceProfileStore({ dir: join(dir, 'profiles') })
+  try {
+    const service = createVoiceStudioService({
+      store,
+      catalog,
+      presetsDir,
+      providers: new Map([['mock', {
+        capabilities: () => ({ canEnroll: true, needsPublicUrl: false }),
+        enroll: async ({ sample }) => {
+          assert.deepEqual(sample, { kind: 'file', path: samplePath })
+          return { remoteId: 'preset-voice' }
+        },
+      }]]),
+    })
+    const result = await service.clone('owner', { provider: 'mock', preset_id: 'demo' })
+    assert.equal(result.status, 'ok')
+    assert.equal(result.profile.remote_voice_id, 'preset-voice')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('serializeProfile omits sample paths, owner internals, and provider payload', () => {
+  const serialized = serializeProfile({
+    id: 'profile-1',
+    ownerId: '/private/owner',
+    label: '中文音色',
+    source: 'preset',
+    presetId: 'demo',
+    sampleRef: { kind: 'file', path: '/private/preset.wav' },
+    provider: 'dashscope',
+    remoteId: 'voice-1',
+    providerPayload: { secret: 'opaque' },
+    status: 'ready',
+  })
+  assert.equal(serialized.label, '中文音色')
+  assert.equal(serialized.remote_voice_id, 'voice-1')
+  assert.equal('sampleRef' in serialized, false)
+  assert.equal('ownerId' in serialized, false)
+  assert.equal('providerPayload' in serialized, false)
+  assert.equal(JSON.stringify(serialized).includes('/private/'), false)
+})
+
+test('confirm returns mode_conflict without persisting or restarting outside cascade mode', async () => {
+  const { dir, catalog, store } = setup()
+  let persistCalls = 0
+  let restartCalls = 0
+  try {
+    const profile = store.upsert('owner', {
+      provider: 'dashscope',
+      remoteId: 'voice-1',
+      status: 'ready',
+      label: '音色',
+    })
+    const service = createVoiceStudioService({
+      store,
+      catalog,
+      providers: new Map(),
+      isCascadeMode: false,
+      persistCascadeTts: async () => { persistCalls += 1 },
+      restartGateway: () => { restartCalls += 1 },
+    })
+    const result = await service.confirm('owner', { profile_id: profile.id })
+    assert.equal(result.error_code, 'mode_conflict')
+    assert.equal(persistCalls, 0)
+    assert.equal(restartCalls, 0)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('confirm resets the model when switching providers without a profile target model', async () => {
+  const { dir, catalog, store } = setup()
+  const persisted = []
+  try {
+    const profile = store.upsert('owner', {
+      provider: 'fish',
+      remoteId: 'ref-1',
+      status: 'ready',
+      label: 'Fish 音色',
+    })
+    const service = createVoiceStudioService({
+      store,
+      catalog,
+      providers: new Map(),
+      getActiveCascade: () => ({ provider: 'dashscope' }),
+      persistCascadeTts: async options => persisted.push(options),
+    })
+    await service.confirm('owner', { profile_id: profile.id, restart: false })
+    assert.deepEqual(persisted, [{
+      provider: 'fish',
+      model: 's2.1-pro-free',
+      voice: 'ref-1',
+    }])
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

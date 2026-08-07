@@ -1,6 +1,6 @@
 import { createSampleResolver } from './sample-resolver.mjs'
 import { createAsrService } from './asr.mjs'
-import { normalizeProviderError, sanitizeLabel } from './providers/contract.mjs'
+import { normalizeProviderError } from './providers/contract.mjs'
 import { serializeProfile } from './types.mjs'
 
 function failure(errorCode, userMessage, retryable = false) {
@@ -15,15 +15,29 @@ function hasRemoteId(remoteId) {
   return typeof remoteId === 'string' ? remoteId.trim().length > 0 : Boolean(remoteId)
 }
 
+const DEFAULT_CASCADE_MODELS = Object.freeze({
+  fish: 's2.1-pro-free',
+  minimax: 'speech-02-turbo',
+  listenhub: 'flowtts',
+  dashscope: 'qwen-audio-3.0-tts-flash',
+})
+
+function displayLabel(label, fallback = 'voice') {
+  const value = String(label || '').trim()
+  return value || fallback
+}
+
 export function createVoiceStudioService({
   store,
   catalog,
   providers,
+  presetsDir,
   getActiveCascade = () => ({}),
+  isCascadeMode = true,
   persistCascadeTts = async () => {},
   restartGateway = () => {},
   defaultProvider,
-  sampleResolver = createSampleResolver({ catalog }),
+  sampleResolver = createSampleResolver({ catalog, presetsDir }),
   asr = createAsrService(),
 } = {}) {
   if (!store) throw new Error('voice profile store is required')
@@ -78,10 +92,12 @@ export function createVoiceStudioService({
     }
 
     let profile = store.upsert(ownerId, {
-      label: sanitizeLabel(input.label, input.preset_id || 'voice'),
+      label: displayLabel(input.label, input.preset_id || 'voice'),
       source: input.preset_id ? 'preset' : (input.sample_url ? 'url' : 'upload'),
       presetId: input.preset_id ?? null,
-      sampleRef: sample.kind === 'url'
+      sampleRef: sample.sourcePath
+        ? { kind: 'file', path: sample.sourcePath }
+        : sample.kind === 'url'
         ? { kind: 'url', url: sample.url }
         : { kind: 'file', path: sample.path },
       provider: selected.id,
@@ -133,7 +149,7 @@ export function createVoiceStudioService({
       return failure('import_unsupported', `${id} 不支持导入已有音色 ID。`)
     }
     let profile = store.upsert(ownerId, {
-      label: sanitizeLabel(input.label, input.remote_voice_id || 'voice'),
+      label: displayLabel(input.label, input.remote_voice_id || 'voice'),
       source: 'import_id',
       provider: id,
       targetModel: input.target_model ?? null,
@@ -189,6 +205,9 @@ export function createVoiceStudioService({
     },
 
     async confirm(ownerId, input = {}) {
+      if (!isCascadeMode) {
+        return failure('mode_conflict', '仅 cascade 模式可确认音色生效。')
+      }
       let profile = input.profile_id ? store.get(ownerId, input.profile_id) : null
       if (input.profile_id && !profile) {
         return failure('profile_not_found', '未找到要确认的音色 profile。')
@@ -213,11 +232,15 @@ export function createVoiceStudioService({
       const remoteId = profile.remoteId
       if (!hasRemoteId(remoteId)) return failure('remote_voice_required', '确认音色需要 remote_voice_id。')
       try {
+        const currentProvider = String(activeCascade().provider || '').trim()
+        const model = profile.targetModel || (
+          currentProvider && currentProvider !== provider
+            ? DEFAULT_CASCADE_MODELS[provider]
+            : undefined
+        )
         await persistCascadeTts({
           provider,
-          ...(profile.targetModel
-            ? { model: profile.targetModel }
-            : {}),
+          ...(model ? { model } : {}),
           voice: remoteId,
         })
         if (input.restart !== false) restartGateway()

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { loadPresetCatalog } from '../src/voice/studio/preset-catalog.mjs'
 
@@ -13,4 +15,16 @@ test('preset catalog lists four demo voices without absolute paths', () => {
   assert.ok(items.every(i => !('path' in i) && !('relativePath' in i)))
   const hit = catalog.list({ query: '沉稳' })
   assert.equal(hit[0].id, 'demo-calm-male')
+})
+
+test('missing preset catalog returns an empty catalog', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'voice-presets-missing-'))
+  try {
+    const catalog = loadPresetCatalog(dir)
+    assert.deepEqual(catalog.list(), [])
+    assert.equal(catalog.get('missing'), null)
+    assert.equal(catalog.resolveSamplePath('missing'), null)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })

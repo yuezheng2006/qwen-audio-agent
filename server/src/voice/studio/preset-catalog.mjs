@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 function normalizePreset(raw = {}) {
@@ -41,10 +41,13 @@ function matchesQuery(preset, query) {
 }
 
 export function loadPresetCatalog(dir) {
-  if (!dir) throw new Error('preset catalog dir is required')
-
-  const catalogPath = join(dir, 'catalog.json')
-  const payload = JSON.parse(readFileSync(catalogPath, 'utf8'))
+  const catalogPath = dir ? join(dir, 'catalog.json') : null
+  let payload = {}
+  if (!catalogPath || !existsSync(catalogPath)) {
+    console.warn(`[voice-studio] preset catalog missing: ${catalogPath || '(no directory)'}`)
+  } else {
+    payload = JSON.parse(readFileSync(catalogPath, 'utf8'))
+  }
   const presets = (Array.isArray(payload.presets) ? payload.presets : [])
     .map(normalizePreset)
     .filter(item => item.id)
@@ -66,7 +69,7 @@ export function loadPresetCatalog(dir) {
     resolveSamplePath(id) {
       const preset = byId.get(String(id || ''))
       if (!preset?.sample?.relativePath) return null
-      return join(dir, preset.sample.relativePath)
+      return join(dir || '', preset.sample.relativePath)
     },
   }
 }

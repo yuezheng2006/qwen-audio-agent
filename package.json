@@ -71,6 +71,7 @@
     "cli/src/",
     "cli/package.json",
     "config/frontend-agent/",
+    "config/voice-presets/",
     "config/openclaw/openclaw.json5",
     "config/deepseek-harness/cordis.yml",
     "examples/backend-adapter/",

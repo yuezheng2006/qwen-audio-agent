@@ -9,12 +9,31 @@ export const VOICE_PROFILE_STATUSES = [
 export function serializeProfile(profile) {
   if (!profile) return null
   const {
+    id,
+    label,
+    source,
+    presetId,
+    provider,
     remoteId,
-    providerPayload: _providerPayload,
-    ...rest
+    targetModel,
+    status,
+    error,
+    createdAt,
+    updatedAt,
+    confirmedAt,
   } = profile
   return {
-    ...rest,
+    id,
+    label,
+    source,
+    presetId: presetId ?? null,
+    provider,
+    targetModel: targetModel ?? null,
+    status,
+    error: error ?? null,
+    createdAt,
+    updatedAt,
+    ...(confirmedAt ? { confirmedAt } : {}),
     remote_voice_id: remoteId ?? null,
   }
 }
