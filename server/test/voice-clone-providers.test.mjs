@@ -7,6 +7,15 @@ import {
 import {
   createListenHubCloneProvider,
 } from '../src/voice/studio/providers/listenhub.mjs'
+import {
+  createFishCloneProvider,
+} from '../src/voice/studio/providers/fish.mjs'
+import {
+  createMinimaxCloneProvider,
+} from '../src/voice/studio/providers/minimax.mjs'
+import {
+  createVoiceCloneProviders,
+} from '../src/voice/studio/providers/registry.mjs'
 import { requireRemoteId } from '../src/voice/studio/providers/contract.mjs'
 
 test('listenhub cannot enroll but can import id', async () => {
@@ -130,4 +139,44 @@ test('dashscope normalizes HTTP errors as retryable enrollment failures', async 
       return true
     },
   )
+})
+
+test('fish importId works; enroll unsupported when disabled', async () => {
+  const p = createFishCloneProvider({ apiKey: 'k', enrollEnabled: false })
+
+  assert.equal(p.id, 'fish')
+  assert.equal(p.capabilities().canEnroll, false)
+  assert.equal(p.capabilities().canImportId, true)
+  await assert.rejects(
+    () => p.enroll({ label: 'f', sample: { kind: 'url', url: 'https://x' } }),
+    /enroll_unsupported/i,
+  )
+  const imported = await p.importId({ label: 'f', remoteId: 'ref-1' })
+  assert.equal(imported.remoteId, 'ref-1')
+})
+
+test('minimax importId works; enroll unsupported when disabled', async () => {
+  const p = createMinimaxCloneProvider({ apiKey: 'k', enrollEnabled: false })
+
+  assert.equal(p.id, 'minimax')
+  assert.equal(p.capabilities().canEnroll, false)
+  assert.equal(p.capabilities().canImportId, true)
+  await assert.rejects(
+    () => p.enroll({ label: 'm', sample: { kind: 'url', url: 'https://x' } }),
+    /enroll_unsupported/i,
+  )
+  const imported = await p.importId({ label: 'm', remoteId: 'voice-1' })
+  assert.equal(imported.remoteId, 'voice-1')
+})
+
+test('registry exposes dashscope fish minimax listenhub', () => {
+  const map = createVoiceCloneProviders({
+    dashscopeApiKey: 'k',
+    fishApiKey: 'k',
+    minimaxApiKey: 'k',
+  })
+
+  for (const id of ['dashscope', 'fish', 'minimax', 'listenhub']) {
+    assert.ok(map.get(id))
+  }
 })
