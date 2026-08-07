@@ -53,7 +53,7 @@ test('dashscope enroll posts customization and returns remoteId', async () => {
   })
 
   const out = await p.enroll({
-    label: 'demo',
+    label: 'smoke-calm',
     sample: { kind: 'url', url: 'https://example.com/a.wav' },
   })
 
@@ -67,7 +67,8 @@ test('dashscope enroll posts customization and returns remoteId', async () => {
     input: {
       action: 'create_voice',
       target_model: 'qwen-audio-3.0-tts-flash',
-      prefix: 'demo',
+      // DashScope rejects hyphens in prefix
+      prefix: 'smokecalm',
       url: 'https://example.com/a.wav',
     },
   })
@@ -133,7 +134,7 @@ test('dashscope normalizes HTTP errors as retryable enrollment failures', async 
     error => {
       assert.deepEqual(error.normalized, {
         error_code: 'enroll_failed',
-        user_message: '音色克隆失败。',
+        user_message: '音色克隆失败：ServiceUnavailable',
         retryable: true,
       })
       return true

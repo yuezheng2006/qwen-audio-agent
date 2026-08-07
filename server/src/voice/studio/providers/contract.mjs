@@ -28,6 +28,15 @@ export function sanitizeLabel(label, fallback = 'voice') {
   return normalized || fallback
 }
 
+/** DashScope voice-enrollment prefix: english letters and numbers only. */
+export function sanitizeDashScopePrefix(label, fallback = 'voice') {
+  const normalized = String(label || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, '')
+    .slice(0, 16)
+  return normalized || fallback
+}
+
 export function requireRemoteId(remoteId) {
   const value = String(remoteId || '')
   if (!value.trim()) throw new Error('remoteId is required')

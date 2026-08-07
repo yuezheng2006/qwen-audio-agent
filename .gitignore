@@ -25,6 +25,10 @@ config/openclaw.json5.last-good
 # Episode hand-verify scratch (committed samples: examples/episodes/*.json)
 examples/episodes/local/
 
+# Local Voice Studio reference audio (keep catalog/.gitkeep; do not commit wav/mp3)
+config/voice-presets/samples/*
+!config/voice-presets/samples/.gitkeep
+
 # Android demo build outputs (sources live under examples/android-demo/)
 examples/android-demo/.gradle/
 examples/android-demo/**/build/

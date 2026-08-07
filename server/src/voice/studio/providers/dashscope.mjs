@@ -3,7 +3,7 @@ import {
   normalizeProviderError,
   providerError,
   requireRemoteId,
-  sanitizeLabel,
+  sanitizeDashScopePrefix,
 } from './contract.mjs'
 
 const ENDPOINT =
@@ -79,7 +79,7 @@ export function createDashScopeCloneProvider({
         input: {
           action: 'create_voice',
           target_model: model,
-          prefix: sanitizeLabel(label),
+          prefix: sanitizeDashScopePrefix(label),
           url: sampleUrl,
         },
       }
@@ -105,9 +105,12 @@ export function createDashScopeCloneProvider({
 
       const payload = await readResponsePayload(response)
       if (!response.ok) {
+        const detail = String(payload?.message || payload?.code || '').trim()
         const error = providerError({
           errorCode: 'enroll_failed',
-          userMessage: '音色克隆失败。',
+          userMessage: detail
+            ? `音色克隆失败：${detail}`
+            : '音色克隆失败。',
           retryable: response.status >= 500,
         })
         error.status = response.status
