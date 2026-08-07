@@ -19,7 +19,7 @@ Voice Studio 演示音色：元数据在 `catalog.json`，参考音频在 `sampl
 2. 按上表文件名保存到 `samples/`，与 `catalog.json` 中 `sample.relativePath` 一致。
 3. 可选：更新 `durationSec` 为实际时长。
 4. 启动 Gateway 后，语音说「列出声音预设」→ Agent 调用 `voice_list_presets` 应能看到对应条目。
-5. 克隆示例：「用沉稳男声克隆」→ `voice_clone`（需已配置 dashscope / fish / minimax 等 Key）。
+5. 克隆示例：「用沉稳男声克隆」→ `voice_clone`（**第一期仅 dashscope 支持 enrollment**，需配置 `DASHSCOPE_API_KEY`）。fish / minimax / listenhub 只能用 `voice_import` 登记已有音色 ID；`FISH_API_KEY` 等用于 cascade TTS 与 import，不能用于样本克隆。
 
 示例（仅演示一条）：
 
