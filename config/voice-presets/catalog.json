@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "presets": [
+    {
+      "id": "demo-calm-male",
+      "label": "沉稳男声",
+      "locale": "zh-CN",
+      "tags": ["沉稳", "男声", "旁白"],
+      "sample": {
+        "relativePath": "samples/demo-calm-male.wav",
+        "durationSec": 10,
+        "license": "demo"
+      },
+      "notes": "中性演示男声，适合说明与旁白。"
+    },
+    {
+      "id": "demo-warm-female",
+      "label": "温暖女声",
+      "locale": "zh-CN",
+      "tags": ["温暖", "女声", "亲切"],
+      "sample": {
+        "relativePath": "samples/demo-warm-female.wav",
+        "durationSec": 10,
+        "license": "demo"
+      },
+      "notes": "中性演示女声，语气柔和亲切。"
+    },
+    {
+      "id": "demo-bright-female",
+      "label": "明快女声",
+      "locale": "zh-CN",
+      "tags": ["明快", "女声", "活力"],
+      "sample": {
+        "relativePath": "samples/demo-bright-female.wav",
+        "durationSec": 9,
+        "license": "demo"
+      },
+      "notes": "中性演示女声，节奏轻快。"
+    },
+    {
+      "id": "demo-story-male",
+      "label": "叙事男声",
+      "locale": "zh-CN",
+      "tags": ["叙事", "男声", "故事"],
+      "sample": {
+        "relativePath": "samples/demo-story-male.wav",
+        "durationSec": 12,
+        "license": "demo"
+      },
+      "notes": "中性演示男声，适合讲故事与长段朗读。"
+    }
+  ]
+}
