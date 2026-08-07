@@ -10,6 +10,10 @@ function providerFrom(providers, id) {
   return providers instanceof Map ? providers.get(id) : providers?.[id]
 }
 
+function hasRemoteId(remoteId) {
+  return typeof remoteId === 'string' ? remoteId.trim().length > 0 : Boolean(remoteId)
+}
+
 export function createVoiceStudioService({
   store,
   catalog,
@@ -89,6 +93,15 @@ export function createVoiceStudioService({
         sample,
         ...(input.target_model ? { targetModel: input.target_model } : {}),
       })
+      if (!hasRemoteId(result?.remoteId)) {
+        const normalized = {
+          error_code: 'missing_remote_id',
+          user_message: 'provider 未返回有效的 remote voice ID。',
+          retryable: false,
+        }
+        store.updateStatus(ownerId, profile.id, { status: 'failed', error: normalized })
+        return failure(normalized.error_code, normalized.user_message, normalized.retryable)
+      }
       profile = store.updateStatus(ownerId, profile.id, {
         status: 'ready',
         remoteId: result.remoteId,
@@ -130,6 +143,15 @@ export function createVoiceStudioService({
         remoteId: input.remote_voice_id,
         ...(input.target_model ? { targetModel: input.target_model } : {}),
       })
+      if (!hasRemoteId(result?.remoteId)) {
+        const normalized = {
+          error_code: 'missing_remote_id',
+          user_message: 'provider 未返回有效的 remote voice ID。',
+          retryable: false,
+        }
+        store.updateStatus(ownerId, profile.id, { status: 'failed', error: normalized })
+        return failure(normalized.error_code, normalized.user_message, normalized.retryable)
+      }
       profile = store.updateStatus(ownerId, profile.id, {
         status: 'ready',
         remoteId: result.remoteId,
@@ -156,19 +178,34 @@ export function createVoiceStudioService({
     importVoice,
 
     async confirm(ownerId, input = {}) {
-      const profile = input.profile_id ? store.get(ownerId, input.profile_id) : null
-      const provider = String(input.provider || profile?.provider || '').trim()
-      const remoteId = input.remote_voice_id || profile?.remoteId
-      if (!profile && !provider) return failure('profile_not_found', '未找到要确认的音色 profile。')
-      if (profile && !['ready', 'confirmed'].includes(profile.status)) {
+      let profile = input.profile_id ? store.get(ownerId, input.profile_id) : null
+      if (input.profile_id && !profile) {
+        return failure('profile_not_found', '未找到要确认的音色 profile。')
+      }
+      if (!profile) {
+        const provider = String(input.provider || '').trim()
+        const remoteId = String(input.remote_voice_id || '').trim()
+        if (!provider || !remoteId) {
+          return failure('profile_not_found', '未找到匹配 provider 和 remote_voice_id 的音色 profile。')
+        }
+        profile = store.list(ownerId).find(item => (
+          ['ready', 'confirmed'].includes(item.status)
+          && item.provider === provider
+          && item.remoteId === remoteId
+        )) || null
+      }
+      if (!profile) return failure('profile_not_found', '未找到匹配的音色 profile。')
+      if (!['ready', 'confirmed'].includes(profile.status)) {
         return failure('profile_not_ready', '音色尚未准备完成，不能确认生效。')
       }
-      if (!remoteId) return failure('remote_voice_required', '确认音色需要 remote_voice_id。')
+      const provider = profile.provider
+      const remoteId = profile.remoteId
+      if (!hasRemoteId(remoteId)) return failure('remote_voice_required', '确认音色需要 remote_voice_id。')
       try {
         await persistCascadeTts({
-          provider: provider || profile.provider,
-          ...(input.target_model || profile?.targetModel
-            ? { model: input.target_model || profile.targetModel }
+          provider,
+          ...(profile.targetModel
+            ? { model: profile.targetModel }
             : {}),
           voice: remoteId,
         })
@@ -183,8 +220,8 @@ export function createVoiceStudioService({
         return {
           status: 'ok',
           switching: input.restart !== false,
-          profile: updated ? serializeProfile(updated) : null,
-          provider: provider || profile.provider,
+          profile: serializeProfile(updated),
+          provider,
           remote_voice_id: remoteId,
         }
       } catch (error) {

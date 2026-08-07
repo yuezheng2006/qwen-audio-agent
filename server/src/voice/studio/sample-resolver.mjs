@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { extname, isAbsolute, resolve as resolvePath } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -43,7 +43,18 @@ export function createSampleResolver({
     if (!existsSync(file) || !statSync(file).isFile()) {
       throw resolverError('sample_missing', '音频样本文件不存在。')
     }
-    return { kind: 'file', path: file }
+    let realFile
+    let realRoots
+    try {
+      realFile = realpathSync(file)
+      realRoots = allowedRoots.map(root => realpathSync(root))
+    } catch {
+      throw resolverError('sample_missing', '音频样本文件无法读取。')
+    }
+    if (!realRoots.some(root => within(realFile, root))) {
+      throw resolverError('sample_missing', '音频样本路径不在允许的预设或临时目录内。')
+    }
+    return { kind: 'file', path: realFile }
   }
 
   return {
