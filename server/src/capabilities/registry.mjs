@@ -10,6 +10,13 @@ export class CapabilityRegistry {
       servers: [],
       toolCount: 0,
     }
+    this.plugins = {
+      apiVersion: null,
+      plugins: [],
+      pluginCount: 0,
+      activeCount: 0,
+      failedCount: 0,
+    }
   }
 
   registerTool({
@@ -98,6 +105,17 @@ export class CapabilityRegistry {
     return this
   }
 
+  setPluginHealth(health = {}) {
+    this.plugins = {
+      apiVersion: health.apiVersion || null,
+      plugins: Array.isArray(health.plugins) ? health.plugins : [],
+      pluginCount: Number(health.pluginCount) || 0,
+      activeCount: Number(health.activeCount) || 0,
+      failedCount: Number(health.failedCount) || 0,
+    }
+    return this
+  }
+
   health() {
     return {
       tools: this.listToolMeta(),
@@ -109,6 +127,7 @@ export class CapabilityRegistry {
       })),
       skillCount: this.skills.length,
       mcp: this.mcp,
+      plugins: this.plugins,
     }
   }
 }

@@ -1,9 +1,10 @@
 import { join } from 'node:path'
 import { createCapabilityRegistry } from './registry.mjs'
 import { createWebSearchTool } from './tools/web-search.mjs'
-import { createWeatherTool } from './tools/weather.mjs'
 import { createEpisodeMemoryTools } from './tools/episode-memory.mjs'
 import { createVoiceStudioTools } from './tools/voice-studio.mjs'
+import { createPluginHost } from '../plugins/host.mjs'
+import { createWeatherPlugin } from '../plugins/builtin/weather.mjs'
 import { loadSkillsFromDir } from './skills/load-skills.mjs'
 import {
   buildMcpProjectedTools,
@@ -36,8 +37,21 @@ export async function resolveCapabilityRegistry(config = {}, {
   const registry = createCapabilityRegistry()
   const { skillsDir, mcpDir } = resolveCapabilitiesPaths(config)
 
+  const pluginHost = createPluginHost({
+    context: {
+      config,
+      fetchImpl,
+      registerTool: (tool, options = {}) => registry.registerTool({
+        ...tool,
+        source: options.source || tool.source || 'plugin',
+      }),
+    },
+  })
+  pluginHost.register(createWeatherPlugin({ fetchImpl }))
+  await pluginHost.activateAll()
+  registry.setPluginHealth(pluginHost.health())
+
   registry.registerTool(createWebSearchTool({ fetchImpl }))
-  registry.registerTool(createWeatherTool({ fetchImpl }))
   for (const tool of createEpisodeMemoryTools({
     episodeStore,
     onChanged: onEpisodeChanged,
