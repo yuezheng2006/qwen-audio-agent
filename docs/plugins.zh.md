@@ -42,3 +42,12 @@ export function activate({ registerTool, plugin }) {
 依赖，而是向本机 faster-whisper 服务发送一轮 16kHz PCM WAV，服务返回
 `{ "text": "..." }`。配置 `CASCADE_STT_PROVIDER=faster-whisper` 和
 `CASCADE_STT_URL=http://127.0.0.1:8000/transcribe` 即可启用。
+
+仓库提供了最小本地服务入口：
+
+```bash
+uv run --with faster-whisper python scripts/faster-whisper-server.py
+```
+
+默认下载并使用 `tiny` 模型；可通过 `FASTER_WHISPER_MODEL`、
+`FASTER_WHISPER_DEVICE` 和 `FASTER_WHISPER_COMPUTE_TYPE` 调整。

@@ -45,3 +45,12 @@ or manage Python dependencies; it sends one 16 kHz PCM WAV utterance to a local
 faster-whisper service, which returns `{ "text": "..." }`. Enable it with
 `CASCADE_STT_PROVIDER=faster-whisper` and
 `CASCADE_STT_URL=http://127.0.0.1:8000/transcribe`.
+
+The repository includes a minimal local service:
+
+```bash
+uv run --with faster-whisper python scripts/faster-whisper-server.py
+```
+
+It defaults to the `tiny` model. Set `FASTER_WHISPER_MODEL`,
+`FASTER_WHISPER_DEVICE`, and `FASTER_WHISPER_COMPUTE_TYPE` to tune the runtime.
