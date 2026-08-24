@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { definePluginManifest, validatePluginManifest } from '../src/plugins/manifest.mjs'
 import { createPluginHost } from '../src/plugins/host.mjs'
+import { loadPluginsFromDirectories, registerPluginsFromDirectories } from '../src/plugins/loader.mjs'
 import { createWeatherPlugin, weatherPluginManifest } from '../src/plugins/builtin/weather.mjs'
 
 test('plugin manifest validates and normalizes metadata', () => {
@@ -59,4 +60,54 @@ test('weather is a first-party plugin with a stable manifest', async () => {
   await host.activate('qwaudio.tool.weather')
   assert.equal(host.health().activeCount, 1)
   assert.deepEqual(host.list()[0].capabilities, ['tool.weather'])
+})
+
+test('plugin loader discovers sorted modules and supports named exports', async () => {
+  const imported = new Map([
+    ['file:///plugins/a.mjs', {
+      manifest: { id: 'demo.a', version: '1.0.0', kind: 'tool', label: 'A' },
+      activate() {},
+    }],
+    ['file:///plugins/b.js', {
+      default: {
+        manifest: { id: 'demo.b', version: '1.0.0', kind: 'tool', label: 'B' },
+        activate() {},
+      },
+    }],
+  ])
+  const result = await loadPluginsFromDirectories(['/plugins'], {
+    readdirImpl: async () => [
+      { name: 'b.js', isFile: () => true },
+      { name: 'a.mjs', isFile: () => true },
+      { name: 'README.md', isFile: () => true },
+    ],
+    importImpl: async specifier => imported.get(specifier),
+  })
+  assert.deepEqual(result.loaded.map(item => item.plugin.manifest.id), ['demo.a', 'demo.b'])
+  assert.deepEqual(result.failures, [])
+})
+
+test('plugin loader isolates import and registration failures', async () => {
+  const host = createPluginHost()
+  const result = await registerPluginsFromDirectories(host, ['/plugins'], {
+    readdirImpl: async () => [
+      { name: 'good.mjs', isFile: () => true },
+      { name: 'bad.mjs', isFile: () => true },
+    ],
+    importImpl: async specifier => {
+      if (specifier.endsWith('/bad.mjs')) throw new Error('broken module')
+      return {
+        default: {
+          manifest: { id: 'demo.good', version: '1.0.0', kind: 'tool', label: 'Good' },
+          activate() {},
+        },
+      }
+    },
+  })
+  assert.equal(result.loaded.length, 1)
+  assert.equal(result.failures.length, 1)
+  await host.activateAll()
+  assert.equal(host.list()[0].status, 'active')
+  assert.equal(host.health().failedCount, 1)
+  assert.equal(host.health().loadFailures[0].error, 'broken module')
 })

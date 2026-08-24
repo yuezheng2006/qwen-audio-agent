@@ -16,6 +16,7 @@ export class CapabilityRegistry {
       pluginCount: 0,
       activeCount: 0,
       failedCount: 0,
+      loadFailures: [],
     }
   }
 
@@ -112,6 +113,7 @@ export class CapabilityRegistry {
       pluginCount: Number(health.pluginCount) || 0,
       activeCount: Number(health.activeCount) || 0,
       failedCount: Number(health.failedCount) || 0,
+      loadFailures: Array.isArray(health.loadFailures) ? health.loadFailures : [],
     }
     return this
   }

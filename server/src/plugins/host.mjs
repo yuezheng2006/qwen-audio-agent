@@ -10,6 +10,7 @@ export class PluginHost {
     this.logger = logger
     this.plugins = new Map()
     this.states = new Map()
+    this.loadFailures = []
   }
 
   register(plugin) {
@@ -87,6 +88,13 @@ export class PluginHost {
     }))
   }
 
+  setLoadFailures(failures = []) {
+    this.loadFailures = Array.isArray(failures)
+      ? failures.map(failure => ({ ...failure }))
+      : []
+    return this
+  }
+
   health() {
     const plugins = this.list()
     return {
@@ -94,7 +102,9 @@ export class PluginHost {
       plugins,
       pluginCount: plugins.length,
       activeCount: plugins.filter(plugin => plugin.status === 'active').length,
-      failedCount: plugins.filter(plugin => plugin.status === 'failed').length,
+      failedCount: plugins.filter(plugin => plugin.status === 'failed').length
+        + this.loadFailures.length,
+      loadFailures: this.loadFailures.map(failure => ({ ...failure })),
     }
   }
 }

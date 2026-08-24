@@ -4,6 +4,7 @@ import { createWebSearchTool } from './tools/web-search.mjs'
 import { createEpisodeMemoryTools } from './tools/episode-memory.mjs'
 import { createVoiceStudioTools } from './tools/voice-studio.mjs'
 import { createPluginHost } from '../plugins/host.mjs'
+import { registerPluginsFromDirectories } from '../plugins/loader.mjs'
 import { createWeatherPlugin } from '../plugins/builtin/weather.mjs'
 import { loadSkillsFromDir } from './skills/load-skills.mjs'
 import {
@@ -48,6 +49,10 @@ export async function resolveCapabilityRegistry(config = {}, {
     },
   })
   pluginHost.register(createWeatherPlugin({ fetchImpl }))
+  const pluginDirectories = config.pluginsEnabled === false
+    ? []
+    : [config.pluginsDir || (config.configDirectory ? join(config.configDirectory, 'plugins') : '')]
+  await registerPluginsFromDirectories(pluginHost, pluginDirectories)
   await pluginHost.activateAll()
   registry.setPluginHealth(pluginHost.health())
 

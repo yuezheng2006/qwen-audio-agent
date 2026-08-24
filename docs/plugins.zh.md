@@ -10,3 +10,28 @@
 插件必须显式声明稳定 id、能力、平台和权限；激活失败时应进入 `failed` 状态并出现在
 健康信息中，不能让 Gateway 静默失效。当前插件 API 版本为 `1`。后续所有 Agent、
 Voice、Knowledge、Reader 和客户端扩展都应复用这套 Manifest 与 Host 生命周期。
+
+## 本地插件
+
+Gateway 启动时会扫描配置目录下的 `plugins/`，也可以通过 `pluginsDir` 传入显式目录。
+目录只加载第一层的 `.js` 和 `.mjs` 文件，并按文件名排序。插件模块可以默认导出插件对象，
+也可以分别导出 `manifest`、`activate` 和可选的 `deactivate`。
+
+```js
+export const manifest = {
+  id: 'acme.tool.example',
+  version: '1.0.0',
+  kind: 'tool',
+  label: '示例工具',
+  capabilities: ['tool.example'],
+  platforms: ['server'],
+  permissions: [],
+}
+
+export function activate({ registerTool, plugin }) {
+  registerTool(createExampleTool(), { source: plugin.id })
+}
+```
+
+模块导入、Manifest 校验或注册失败时，插件会记录在 `health.plugins.loadFailures`，
+不会影响其他插件和 Gateway 启动。
