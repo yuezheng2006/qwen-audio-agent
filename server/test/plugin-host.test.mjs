@@ -30,6 +30,22 @@ test('plugin host activates, reports, and deactivates plugins', async () => {
   assert.equal(host.list()[0].status, 'inactive')
 })
 
+test('a failed plugin is isolated from other plugin activation', async () => {
+  const host = createPluginHost()
+  host.register({
+    manifest: { id: 'demo.failed', version: '1.0.0', kind: 'tool', label: 'Failed' },
+    activate() { throw new Error('broken') },
+  })
+  host.register({
+    manifest: { id: 'demo.healthy', version: '1.0.0', kind: 'tool', label: 'Healthy' },
+    activate() {},
+  })
+  await host.activateAll()
+  assert.equal(host.list().find(plugin => plugin.id === 'demo.failed').status, 'failed')
+  assert.equal(host.list().find(plugin => plugin.id === 'demo.healthy').status, 'active')
+  assert.equal(host.health().failedCount, 1)
+})
+
 test('weather is a first-party plugin with a stable manifest', async () => {
   const host = createPluginHost({
     context: {

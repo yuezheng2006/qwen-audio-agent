@@ -53,7 +53,13 @@ export class PluginHost {
 
   async activateAll() {
     const results = []
-    for (const id of this.plugins.keys()) results.push(await this.activate(id))
+    for (const id of this.plugins.keys()) {
+      try {
+        results.push(await this.activate(id))
+      } catch {
+        results.push(this.states.get(id))
+      }
+    }
     return results
   }
 
