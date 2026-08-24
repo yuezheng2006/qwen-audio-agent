@@ -35,3 +35,10 @@ export function activate({ registerTool, plugin }) {
 
 模块导入、Manifest 校验或注册失败时，插件会记录在 `health.plugins.loadFailures`，
 不会影响其他插件和 Gateway 启动。
+
+## faster-whisper
+
+首个 STT 插件是 `qwaudio.stt.faster-whisper`。Gateway 不直接安装或管理 Python
+依赖，而是向本机 faster-whisper 服务发送一轮 16kHz PCM WAV，服务返回
+`{ "text": "..." }`。配置 `CASCADE_STT_PROVIDER=faster-whisper` 和
+`CASCADE_STT_URL=http://127.0.0.1:8000/transcribe` 即可启用。

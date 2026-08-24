@@ -37,3 +37,11 @@ export function activate({ registerTool, plugin }) {
 Import, manifest-validation, and registration failures are exposed under
 `health.plugins.loadFailures`; they do not prevent other plugins or the Gateway
 from starting.
+
+## faster-whisper
+
+The first STT plugin is `qwaudio.stt.faster-whisper`. The Gateway does not bundle
+or manage Python dependencies; it sends one 16 kHz PCM WAV utterance to a local
+faster-whisper service, which returns `{ "text": "..." }`. Enable it with
+`CASCADE_STT_PROVIDER=faster-whisper` and
+`CASCADE_STT_URL=http://127.0.0.1:8000/transcribe`.

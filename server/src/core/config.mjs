@@ -85,15 +85,16 @@ export function resolveBackendModels(env = process.env) {
     common,
     openCode: common ? `alibaba-cn/${name}` : '',
     openClaw: common ? `bailian/${name}` : '',
-    qoder: common,
-    qwen: common,
+    qoder: name,
+    qwen: name,
     kimi: common,
     hermes: common,
-    codeBuddy: common,
-    codex: common,
+    codeBuddy: name,
+    codex: name,
     claude: common,
     deepSeekHarness: String(
-      env.DEEPSEEK_HARNESS_MODEL || '',
+      env.DEEPSEEK_HARNESS_MODEL
+      || (name.startsWith('deepseek-') ? name : ''),
     ).trim(),
     pi: common,
     acp: common,
@@ -206,6 +207,107 @@ const frontendProfileConfiguration = resolveFrontendProfileConfiguration({
   baseDirectory: root,
 })
 
+function normalizeCascadeTtsProvider(raw) {
+  const key = String(raw || 'dashscope').trim().toLowerCase()
+  if (key === 'fish' || key === 'fishaudio' || key === 'fish-audio') return 'fish'
+  return key || 'dashscope'
+}
+
+export function resolveCascadeTtsConfig(env = process.env, sharedKey = '') {
+  const provider = normalizeCascadeTtsProvider(env.CASCADE_TTS_PROVIDER)
+  const fish = provider === 'fish'
+  return {
+    provider,
+    // Qwen-Audio-TTS（默认）；voicebox=本机缝；fish=Fish Audio S2.1 HTTP PCM。
+    // CosyVoice 不作为 cascade 默认。
+    model: env.CASCADE_TTS_MODEL
+      || env.FISH_TTS_MODEL
+      || (fish ? 's2.1-pro-free' : 'qwen-audio-3.0-tts-flash'),
+    voice: (
+      env.CASCADE_TTS_VOICE_ID
+      || env.CASCADE_TTS_VOICE
+      || env.FISH_REFERENCE_ID
+      || (fish ? '' : 'longanhuan_v3.6')
+    ),
+    apiKey: (
+      env.CASCADE_TTS_API_KEY
+      || (fish ? env.FISH_API_KEY : '')
+      || sharedKey
+    ),
+    voiceboxBaseUrl: (
+      env.VOICEBOX_BASE_URL || 'http://127.0.0.1:17493'
+    ).replace(/\/+$/, ''),
+    fishBaseUrl: (
+      env.FISH_API_BASE_URL || 'https://api.fish.audio'
+    ).replace(/\/+$/, ''),
+    fishLatency: env.FISH_TTS_LATENCY || env.CASCADE_TTS_LATENCY || 'balanced',
+    // The Gateway forwards assistant audio to clients as 24 kHz PCM16.
+    sampleRate: 24000,
+  }
+}
+
+export function resolveCascadeConfig(env = process.env) {
+  const sharedKey = env.QWEN_AUDIO_REALTIME_API_KEY || env.DASHSCOPE_API_KEY || ''
+  return {
+    host: '127.0.0.1',
+    port: numberSetting(env.CASCADE_PORT, 0, { min: 0, max: 65535 }),
+    dashscopeWsUrl: (
+      env.CASCADE_DASHSCOPE_WS_URL
+      || 'wss://dashscope.aliyuncs.com/api-ws/v1/inference'
+    ),
+    stt: {
+      provider: (env.CASCADE_STT_PROVIDER || 'dashscope').toLowerCase(),
+      // DashScope inference duplex ASR。官方实时推荐 qwen-audio-3.0-asr-flash-streaming；
+      // fun-asr-realtime 仍可用但部分快照将下线；qwen3-asr-flash(-realtime) 非此协议。
+      model: env.CASCADE_STT_MODEL || 'qwen-audio-3.0-asr-flash-streaming',
+      apiKey: env.CASCADE_STT_API_KEY || sharedKey,
+      // Local STT plugins, such as faster-whisper, expose a simple utterance
+      // endpoint instead of requiring their runtime inside the Gateway.
+      url: env.CASCADE_STT_URL || '',
+      sampleRate: numberSetting(env.CASCADE_STT_SAMPLE_RATE, 16000, {
+        min: 8000,
+        max: 48000,
+      }),
+    },
+    llm: {
+      baseUrl: (
+        env.CASCADE_LLM_BASE_URL
+        || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+      ).replace(/\/+$/, ''),
+      model: env.CASCADE_LLM_MODEL || 'qwen-flash',
+      apiKey: env.CASCADE_LLM_API_KEY || sharedKey,
+      maxTokens: numberSetting(
+        env.CASCADE_LLM_MAX_TOKENS,
+        500,
+        { min: 50, max: 4000 },
+      ),
+    },
+    tts: resolveCascadeTtsConfig(env, sharedKey),
+    vad: {
+      threshold: numberSetting(
+        env.CASCADE_VAD_THRESHOLD,
+        0.015,
+        { min: 0.001, max: 0.5 },
+      ),
+      minSpeechMs: numberSetting(
+        env.CASCADE_VAD_MIN_SPEECH_MS,
+        180,
+        { min: 40, max: 2000 },
+      ),
+      silenceMs: numberSetting(
+        env.CASCADE_VAD_SILENCE_MS,
+        650,
+        { min: 200, max: 5000 },
+      ),
+      maxSpeechMs: numberSetting(
+        env.CASCADE_VAD_MAX_SPEECH_MS,
+        12000,
+        { min: 0, max: 120000 },
+      ),
+    },
+  }
+}
+
 export const config = {
   root,
   configDirectory: runtimeEnvironment.configDirectory,
@@ -219,6 +321,7 @@ export const config = {
   audioProvider: realtimeFrontend.provider,
   realtimeConfigSignature: realtimeFrontend.signature,
   dashscopeApiKey: realtimeFrontend.dashscopeApiKey,
+  cascade: resolveCascadeConfig(),
   audioRealtimeBaseUrl: realtimeFrontend.dashscopeRealtimeUrl,
   // User-managed huggingface/speech-to-speech OpenAI Realtime endpoint. The
   // pipeline owns its STT, LLM, TTS and voice configuration; Gateway only
@@ -281,9 +384,7 @@ export const config = {
         process.env.OPENCLAW_GATEWAY_TOKEN_FILE
         || resolve(runtimeEnvironment.openClawStateDirectory, 'gateway-token')
       ),
-      model: backendOwnership === 'owned'
-        ? backendModels.openClaw
-        : backendModels.common,
+      model: backendModels.openClaw,
       directory: resolveBackendWorkspace('openclaw'),
       cliPath: String(process.env.OPENCLAW_ACP_BIN || '').trim(),
       coordinatorAgent: (
@@ -323,7 +424,12 @@ export const config = {
     codebuddy: {
       model: String(backendModels.codeBuddy).trim(),
       modelUrl: (
-        process.env.CODEBUDDY_MODEL_URL || ''
+        process.env.CODEBUDDY_MODEL_URL
+        || (backendModels.common ? (
+          process.env.DASHSCOPE_WORKSPACE_ID
+            ? `https://${process.env.DASHSCOPE_WORKSPACE_ID}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions`
+            : 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
+        ) : '')
       ),
       directory: resolveBackendWorkspace('codebuddy'),
       cliPath: String(process.env.CODEBUDDY_BIN || '').trim(),
@@ -331,7 +437,12 @@ export const config = {
     codex: {
       model: String(backendModels.codex).trim(),
       modelUrl: (
-        process.env.CODEX_BASE_URL || ''
+        process.env.CODEX_BASE_URL
+        || (backendModels.common ? (
+          process.env.DASHSCOPE_WORKSPACE_ID
+            ? `https://${process.env.DASHSCOPE_WORKSPACE_ID}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`
+            : 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+        ) : '')
       ).replace(/\/+$/, ''),
       directory: resolveBackendWorkspace('codex'),
       cliPath: String(process.env.CODEX_ACP_BIN || '').trim(),
@@ -498,40 +609,57 @@ export const config = {
     runtimeEnvironment.configDirectory,
     'memory-audit.jsonl',
   ),
-  // 偏好自更新：从对话里观察反复出现的表达偏好，攒够跨会话确认后写入 USER.md
-  // 的观察推断段。默认关闭 —— 它会自动改写用户档案，先让愿意尝试的用户显式开启。
-  // 复用 memoryModel / memoryBaseUrl / memoryApiKey，不额外要一套凭据。
-  preferenceLearningEnabled: String(
-    process.env.QWEN_AUDIO_PREFERENCE_LEARNING || 'off',
-  ).toLowerCase() === 'on',
-  preferenceCandidatePath: resolve(
-    runtimeEnvironment.configDirectory,
-    'preference-candidates.json',
+  configDirectory: runtimeEnvironment.configDirectory,
+  memoryProvider: String(process.env.MEMORY_PROVIDER || 'local').trim().toLowerCase(),
+  knowledgeProvider: String(process.env.KNOWLEDGE_PROVIDER || 'local').trim().toLowerCase(),
+  knowledgeDir: process.env.KNOWLEDGE_DIR
+    ? resolve(process.env.KNOWLEDGE_DIR)
+    : runtimeEnvironment.knowledgeDir,
+  knowledgeDefaultKbId: process.env.KNOWLEDGE_DEFAULT_KB || 'default',
+  contentDir: process.env.CONTENT_DIR
+    ? resolve(process.env.CONTENT_DIR)
+    : runtimeEnvironment.contentDir,
+  capabilitiesDir: process.env.CAPABILITIES_DIR
+    ? resolve(process.env.CAPABILITIES_DIR)
+    : resolve(runtimeEnvironment.configDirectory, 'capabilities'),
+  skillsDir: process.env.SKILLS_DIR
+    ? resolve(process.env.SKILLS_DIR)
+    : resolve(runtimeEnvironment.configDirectory, 'capabilities/skills'),
+  mcpDir: process.env.MCP_DIR
+    ? resolve(process.env.MCP_DIR)
+    : resolve(runtimeEnvironment.configDirectory, 'capabilities/mcp'),
+  mcpServersJson: process.env.MCP_SERVERS_JSON || '',
+  mcpToolTimeoutMs: numberSetting(
+    process.env.MCP_TOOL_TIMEOUT_MS,
+    8000,
+    { min: 1000 },
   ),
-  // 会话摘要：每场会话结束时记一条「聊了哪些话题 + 一句要点」，供用户日后问
-  // 「前几天我们聊的那个」时用 recall 工具查。默认关闭 —— 它留存的是
-  // 对话内容的概括，属于需要用户显式同意的一档。只存话题与一句要点，不存转写。
-  sessionDigestEnabled: String(
-    process.env.QWEN_AUDIO_SESSION_DIGEST || 'off',
-  ).toLowerCase() === 'on',
-  sessionDigestPath: resolve(
-    runtimeEnvironment.configDirectory,
-    'session-digests.json',
-  ),
-  // 领域资料库：用户导入的手册 / 规章 / 教材。资料本体落在后端共享 workspace 下，
-  // 后端拿到路径就能自己 grep / read —— 前端只维护一份带摘要的清单。
-  // 默认关闭：它会把用户的文件复制到另一个位置，需要用户显式同意。
-  domainLibraryEnabled: String(
-    process.env.QWEN_AUDIO_DOMAIN_LIBRARY || 'off',
-  ).toLowerCase() === 'on',
-  domainDocumentDirectory: resolve(
-    defaultBackendWorkspace(runtimeEnvironment.configDirectory),
-    'domain',
-  ),
-  domainIndexPath: resolve(
-    runtimeEnvironment.configDirectory,
-    'domain-index.json',
-  ),
+  webSearchProvider: String(process.env.WEB_SEARCH_PROVIDER || 'ddgs').trim().toLowerCase(),
+  weatherProvider: String(process.env.WEATHER_PROVIDER || 'open-meteo').trim().toLowerCase(),
+  mem0: {
+    apiKey: process.env.MEM0_API_KEY || '',
+    host: process.env.MEM0_HOST || '',
+    orgId: process.env.MEM0_ORG_ID || '',
+    projectId: process.env.MEM0_PROJECT_ID || '',
+  },
+  openviking: {
+    baseUrl: process.env.OPENVIKING_URL || 'http://127.0.0.1:1933',
+    apiKey: process.env.OPENVIKING_API_KEY || '',
+    account: process.env.OPENVIKING_ACCOUNT || 'default',
+    user: process.env.OPENVIKING_USER || 'default',
+    memoriesDir: process.env.OPENVIKING_MEMORIES_DIR
+      ? resolve(process.env.OPENVIKING_MEMORIES_DIR)
+      : resolve(runtimeEnvironment.configDirectory, 'memories/openviking'),
+  },
+  evermind: {
+    mode: process.env.EVERMIND_MODE || 'cloud',
+    baseUrl: process.env.EVERMIND_BASE_URL || '',
+    apiKey: process.env.EVERMIND_API_KEY || process.env.EVEROS_API_KEY || '',
+    userIdPrefix: process.env.EVERMIND_USER_PREFIX || 'qwa',
+    memoriesDir: process.env.EVERMIND_MEMORIES_DIR
+      ? resolve(process.env.EVERMIND_MEMORIES_DIR)
+      : resolve(runtimeEnvironment.configDirectory, 'memories/evermind'),
+  },
   reminderSchedulerEnabled: String(
     process.env.QWEN_AUDIO_AGENT_REMINDER_SCHEDULER || 'true'
   ).toLowerCase() === 'true',
@@ -563,6 +691,13 @@ export const config = {
     0,
     { min: 0, max: 86_400 },
   ) * 1000,
+  wakeWordEnabled: String(
+    process.env.QWEN_AUDIO_WAKE_WORD_ENABLED || '',
+  ).toLowerCase() === 'true',
+  wakeWord: '你好千问',
+  wakeWordModelDirectory: process.env.QWEN_AUDIO_WAKE_WORD_MODEL_DIR
+    ? resolve(process.env.QWEN_AUDIO_WAKE_WORD_MODEL_DIR)
+    : resolve(runtimeEnvironment.configDirectory, 'models/wake-word'),
 }
 
 export function realtimeUrl(baseUrl, model) {

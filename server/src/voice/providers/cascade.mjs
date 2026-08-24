@@ -25,7 +25,9 @@ export const cascadeProvider = {
   ].join(' + '),
   voice: () => config.cascade.tts.voice,
   isConfigured: () => Boolean(
-    config.cascade?.stt?.apiKey
+    (config.cascade?.stt?.provider === 'faster-whisper'
+      ? config.cascade?.stt?.url
+      : config.cascade?.stt?.apiKey)
     && config.cascade?.llm?.apiKey
     && config.cascade?.tts?.apiKey,
   ),

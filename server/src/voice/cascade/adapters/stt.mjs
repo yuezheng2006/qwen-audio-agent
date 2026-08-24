@@ -1,4 +1,6 @@
 import { DashScopeTask } from './dashscope-ws.mjs'
+import { createPluginHost } from '../../../plugins/host.mjs'
+import { createFasterWhisperPlugin } from '../../../plugins/builtin/faster-whisper.mjs'
 
 // Streaming STT adapter contract: one recognizer per utterance.
 //
@@ -93,11 +95,26 @@ class DashScopeRecognizer {
   }
 }
 
-const STT_PROVIDERS = {
+export const STT_PROVIDERS = {
   dashscope: (cascadeConfig, handlers) => (
     new DashScopeRecognizer(cascadeConfig, handlers)
   ),
 }
+
+export function registerSttProvider(id, factory) {
+  const key = String(id || '').trim().toLowerCase()
+  if (!key) throw new Error('STT provider id is required')
+  if (typeof factory !== 'function') throw new Error(`STT provider ${key} factory is required`)
+  if (STT_PROVIDERS[key]) throw new Error(`STT provider ${key} 已经注册`)
+  STT_PROVIDERS[key] = factory
+  return factory
+}
+
+const sttPluginHost = createPluginHost({
+  context: { registerSttProvider },
+})
+sttPluginHost.register(createFasterWhisperPlugin())
+void sttPluginHost.activate('qwaudio.stt.faster-whisper')
 
 export function createRecognizer(cascadeConfig, handlers) {
   const factory = STT_PROVIDERS[cascadeConfig.stt.provider]
