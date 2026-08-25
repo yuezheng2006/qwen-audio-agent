@@ -11,6 +11,12 @@ state instead of silently disabling the Gateway.
 
 The current plugin API version is `1`.
 
+Published consumers can import the stable SDK entry point:
+
+```js
+import { definePluginManifest } from 'qwen-audio-agent/plugin-sdk'
+```
+
 ## Local plugins
 
 At startup the Gateway scans `plugins/` below the configured user directory. An

@@ -11,6 +11,12 @@
 健康信息中，不能让 Gateway 静默失效。当前插件 API 版本为 `1`。后续所有 Agent、
 Voice、Knowledge、Reader 和客户端扩展都应复用这套 Manifest 与 Host 生命周期。
 
+发布后的第三方插件可以通过稳定入口引用 SDK：
+
+```js
+import { definePluginManifest } from 'qwen-audio-agent/plugin-sdk'
+```
+
 ## 本地插件
 
 Gateway 启动时会扫描配置目录下的 `plugins/`，也可以通过 `pluginsDir` 传入显式目录。
