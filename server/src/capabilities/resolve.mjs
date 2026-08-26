@@ -39,6 +39,10 @@ export async function resolveCapabilityRegistry(config = {}, {
   const { skillsDir, mcpDir } = resolveCapabilitiesPaths(config)
 
   const pluginHost = createPluginHost({
+    grantedPermissions: [
+      'network.open-meteo',
+      ...(Array.isArray(config.pluginPermissions) ? config.pluginPermissions : []),
+    ],
     context: {
       config,
       fetchImpl,

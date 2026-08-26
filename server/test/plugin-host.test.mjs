@@ -47,6 +47,22 @@ test('a failed plugin is isolated from other plugin activation', async () => {
   assert.equal(host.health().failedCount, 1)
 })
 
+test('plugin permissions are checked before activation', async () => {
+  let activated = false
+  const host = createPluginHost({ grantedPermissions: ['network.loopback'] })
+  host.register({
+    manifest: {
+      id: 'demo.network', version: '1.0.0', kind: 'tool', label: 'Network',
+      permissions: ['network.internet'],
+    },
+    activate() { activated = true },
+  })
+  await host.activateAll()
+  assert.equal(activated, false)
+  assert.equal(host.list()[0].status, 'failed')
+  assert.match(host.list()[0].error || '', /缺少授权权限/)
+})
+
 test('weather is a first-party plugin with a stable manifest', async () => {
   const host = createPluginHost({
     context: {

@@ -5,9 +5,18 @@ function pluginError(id, message) {
 }
 
 export class PluginHost {
-  constructor({ context = {}, logger = null } = {}) {
+  constructor({
+    context = {},
+    logger = null,
+    grantedPermissions = null,
+    permissionPolicy = null,
+  } = {}) {
     this.context = context
     this.logger = logger
+    this.grantedPermissions = Array.isArray(grantedPermissions)
+      ? new Set(grantedPermissions.map(permission => String(permission).trim()))
+      : null
+    this.permissionPolicy = permissionPolicy
     this.plugins = new Map()
     this.states = new Map()
     this.loadFailures = []
@@ -35,6 +44,16 @@ export class PluginHost {
     const state = this.states.get(pluginId)
     if (state.status === 'active') return state
     try {
+      const missingPermissions = this.missingPermissions(plugin.manifest)
+      if (missingPermissions.length) {
+        throw new Error(`缺少授权权限：${missingPermissions.join('、')}`)
+      }
+      if (this.permissionPolicy) {
+        const allowed = await this.permissionPolicy(plugin.manifest, {
+          host: this,
+        })
+        if (allowed !== true) throw new Error('宿主拒绝了插件权限')
+      }
       await plugin.activate({
         ...this.context,
         plugin: plugin.manifest,
@@ -50,6 +69,13 @@ export class PluginHost {
       throw pluginError(pluginId, `激活失败：${state.error}`)
     }
     return state
+  }
+
+  missingPermissions(manifest) {
+    if (!this.grantedPermissions) return []
+    return manifest.permissions.filter(permission => (
+      !this.grantedPermissions.has(permission)
+    ))
   }
 
   async activateAll() {
@@ -85,6 +111,7 @@ export class PluginHost {
     return [...this.plugins.values()].map(plugin => ({
       ...plugin.manifest,
       status: this.states.get(plugin.manifest.id)?.status || 'unknown',
+      error: this.states.get(plugin.manifest.id)?.error || null,
     }))
   }
 
