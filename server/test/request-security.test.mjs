@@ -2,6 +2,12 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { isAllowedOrigin } from '../src/core/request-security.mjs'
 
+test('literal null origin does not throw on loopback', () => {
+  assert.equal(isAllowedOrigin({
+    headers: { host: '127.0.0.1:3101', origin: 'null' },
+  }), true)
+})
+
 test('allows loopback same-origin and non-browser requests', () => {
   assert.equal(isAllowedOrigin({ headers: { host: 'localhost:3101' } }), true)
   assert.equal(isAllowedOrigin({

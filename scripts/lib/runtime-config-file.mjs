@@ -55,6 +55,7 @@ export function persistCascadeTts({
   provider,
   model,
   voice,
+  voiceLabel,
   configPath = resolveUserConfigPath(),
   env = process.env,
 } = {}) {
@@ -69,6 +70,10 @@ export function persistCascadeTts({
   }
   if (voice !== undefined && voice !== null) {
     updates.CASCADE_TTS_VOICE_ID = String(voice).trim()
+  }
+  if (voiceLabel !== undefined && voiceLabel !== null) {
+    const label = String(voiceLabel).trim()
+    if (label) updates.CASCADE_TTS_VOICE_LABEL = label
   }
   upsertEnvFile(configPath, updates)
   return { provider: providerId, configPath, updates }

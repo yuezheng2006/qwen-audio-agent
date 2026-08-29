@@ -7,14 +7,101 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   writeFileSync,
 } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { basename, extname, join } from 'node:path'
-import { extractMarkdownFromSource } from './mineru-client.mjs'
+import { extractMarkdownFromSource, writeTempMarkdown } from './mineru-client.mjs'
 import { slugifyTitle, splitMarkdownIntoChapters } from './split-chapters.mjs'
+
+export function htmlToReadableMarkdown(html) {
+  const text = String(html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim()
+  return text
+}
+
+export async function fetchUrlAsMarkdown(url, fetchImpl = globalThis.fetch) {
+  let parsed
+  try {
+    parsed = new URL(String(url || '').trim())
+  } catch {
+    throw new Error('URL 无效')
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error('只支持 http/https URL')
+  }
+  const response = await fetchImpl(parsed.href, { redirect: 'follow' })
+  if (!response.ok) {
+    throw new Error(`抓取失败 ${response.status}`)
+  }
+  const type = String(response.headers?.get?.('content-type') || '')
+  const body = await response.text()
+  if (/markdown|text\/plain/i.test(type) || /\.(md|txt)$/i.test(parsed.pathname)) {
+    return { markdown: body, parser: 'url-text' }
+  }
+  if (/html/i.test(type) || /^\s*</.test(body)) {
+    const markdown = htmlToReadableMarkdown(body)
+    if (markdown.length < 40) {
+      throw new Error('网页正文过短，请另存为 Markdown 再导入')
+    }
+    return { markdown, parser: 'url-html' }
+  }
+  return { markdown: body, parser: 'url-text' }
+}
+
+async function resolveImportSource({
+  sourcePath,
+  markdown,
+  text,
+  url,
+  fileName,
+  fileBytes,
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  const path = String(sourcePath || '').trim()
+  if (path) return { sourcePath: path, parser: null }
+  const pasted = String(markdown || text || '').trim()
+  if (pasted) {
+    return { sourcePath: writeTempMarkdown(pasted, 'paste.md'), parser: 'paste' }
+  }
+  if (url) {
+    const fetched = await fetchUrlAsMarkdown(url, fetchImpl)
+    return {
+      sourcePath: writeTempMarkdown(fetched.markdown, 'url.md'),
+      parser: fetched.parser,
+    }
+  }
+  if (fileBytes && fileName) {
+    const dir = mkdtempSync(join(tmpdir(), 'qwaudio-upload-'))
+    const dest = join(dir, basename(String(fileName)))
+    writeFileSync(dest, fileBytes)
+    return { sourcePath: dest, parser: 'upload' }
+  }
+  throw new Error('需要 sourcePath、markdown、text、url 或文件')
+}
 
 export async function importContentDocument({
   sourcePath,
+  markdown,
+  text,
+  url,
+  fileName,
+  fileBytes,
+  fetchImpl = globalThis.fetch,
   contentDir,
   knowledgeDir = '',
   title = '',
@@ -23,7 +110,16 @@ export async function importContentDocument({
   extractOptions = {},
 } = {}) {
   if (!contentDir) throw new Error('contentDir is required')
-  if (!sourcePath) throw new Error('sourcePath is required')
+  const resolved = await resolveImportSource({
+    sourcePath,
+    markdown,
+    text,
+    url,
+    fileName,
+    fileBytes,
+    fetchImpl,
+  })
+  sourcePath = resolved.sourcePath
 
   const bookTitle = String(title || basename(sourcePath, extname(sourcePath))).trim()
     || '未命名'
@@ -56,7 +152,7 @@ export async function importContentDocument({
     title: bookTitle,
     slug: bookSlug,
     sourcePath,
-    parser: extracted.parser,
+    parser: resolved.parser || extracted.parser,
     importedAt: new Date().toISOString(),
     chapterCount: written.length,
     chapters: written.map(item => ({
@@ -88,7 +184,7 @@ export async function importContentDocument({
     ok: true,
     title: bookTitle,
     slug: bookSlug,
-    parser: extracted.parser,
+    parser: resolved.parser || extracted.parser,
     contentDir: bookDir,
     catalogPath: join(bookDir, 'CATALOG.json'),
     chapters: written,

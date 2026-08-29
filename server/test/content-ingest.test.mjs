@@ -20,7 +20,11 @@ import {
   resolveParseStrategy,
   writeTempMarkdown,
 } from '../src/voice/reader/ingest/mineru-client.mjs'
-import { importContentDocument } from '../src/voice/reader/ingest/import-content.mjs'
+import {
+  fetchUrlAsMarkdown,
+  htmlToReadableMarkdown,
+  importContentDocument,
+} from '../src/voice/reader/ingest/import-content.mjs'
 import { MarkdownContentStore } from '../src/voice/reader/content-store.mjs'
 import { createLocalKnowledgeProvider } from '../src/knowledge/local-provider.mjs'
 
@@ -87,6 +91,38 @@ test('slugify strips unsafe path characters', () => {
   assert.equal(slugifyTitle(''), 'book')
   assert.equal(slugifyTitle('   '), 'book')
   assert.equal(slugifyTitle('a'.repeat(100)).length, 80)
+})
+
+test('paste and URL import write catalog chapters', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'qwaudio-paste-'))
+  const pasted = await importContentDocument({
+    contentDir: root,
+    title: '粘贴长文',
+    markdown: '# 第一章\n\n天黑了。风很大。路很远。\n\n# 第二章\n\n他走了。再也没回来。\n',
+  })
+  assert.equal(pasted.parser, 'paste')
+  assert.ok(pasted.chapters.length >= 2)
+
+  const html = htmlToReadableMarkdown('<html><body><h1>标题</h1><p>这是一段足够长的正文用来通过导入门槛检查。</p></body></html>')
+  assert.match(html, /标题/)
+  assert.doesNotMatch(html, /<p>/)
+
+  const fetched = await fetchUrlAsMarkdown('https://example.test/a.md', async () => ({
+    ok: true,
+    headers: { get: () => 'text/markdown' },
+    text: async () => '# 远程\n\n足够长的远程正文，用于确认 URL 导入路径。\n',
+  }))
+  assert.equal(fetched.parser, 'url-text')
+  assert.match(fetched.markdown, /远程/)
+
+  const uploaded = await importContentDocument({
+    contentDir: join(root, 'upload-lib'),
+    title: '上传书',
+    fileName: 'book.md',
+    fileBytes: Buffer.from('# 第一章\n\n上传正文足够长。\n\n# 第二章\n\n上传结束。\n'),
+  })
+  assert.equal(uploaded.parser, 'upload')
+  assert.ok(uploaded.chapters.length >= 2)
 })
 
 test('parse strategy routes text vs mineru vs unsupported', () => {
@@ -285,7 +321,7 @@ test('import validates inputs and empty parse results', async () => {
   )
   await assert.rejects(
     () => importContentDocument({ contentDir: '/tmp/c' }),
-    /sourcePath is required/,
+    /sourcePath|markdown|url|文件/,
   )
 
   const root = mkdtempSync(join(tmpdir(), 'qwaudio-ingest-err-'))

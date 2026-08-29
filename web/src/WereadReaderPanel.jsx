@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 async function readJson(response) {
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    throw new Error(payload.error || `请求失败（${response.status}）`)
+  const resolved = await response
+  const payload = await resolved.json().catch(() => ({}))
+  if (!resolved.ok) {
+    throw new Error(payload.error || `请求失败（${resolved.status}）`)
   }
   return payload
 }
 
-export default function WereadReaderPanel({ open, onClose }) {
+export default function WereadReaderPanel({
+  open,
+  onClose,
+  embedded = false,
+  persistToShelf = false,
+  onPersisted,
+}) {
   const [tab, setTab] = useState('shelf')
   const [status, setStatus] = useState(null)
   const [shelf, setShelf] = useState(null)
@@ -108,6 +115,7 @@ export default function WereadReaderPanel({ open, onClose }) {
           bookId: book.bookId,
           mode,
           itemIds: ids,
+          persistContent: persistToShelf === true,
         }),
       })
       if (!response.ok) {
@@ -115,6 +123,7 @@ export default function WereadReaderPanel({ open, onClose }) {
         throw new Error(payload.error || `朗读失败（${response.status}）`)
       }
       const truncated = response.headers.get('X-Weread-Truncated') === '1'
+      if (persistToShelf) onPersisted?.()
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       objectUrlRef.current = url
@@ -229,18 +238,20 @@ export default function WereadReaderPanel({ open, onClose }) {
     </div>
   ) : null)
 
-  return (
-    <div className="settings-drawer weread-drawer" role="dialog" aria-label="微信读书阅读">
-      <div className="settings-panel">
+  const body = (
+    <>
+        {!embedded && (
         <header>
           <h2>阅读</h2>
           <button className="ghost" onClick={() => { stopAudio(); onClose() }} disabled={busy}>
             关闭
           </button>
         </header>
+        )}
 
         <p className="hint">
           书架浏览 · 金句划线 · 公开书评 · 单条或全部朗读
+          {persistToShelf ? ' · 朗读会落入书架' : ''}
           {status?.configured === false ? ' · 未配置 WEREAD_API_KEY' : ''}
         </p>
 
@@ -472,6 +483,15 @@ export default function WereadReaderPanel({ open, onClose }) {
             if (audioRef.current?.ended) setSpeaking(false)
           }}
         />
+    </>
+  )
+
+  if (embedded) return <div className="weread-embedded">{body}</div>
+
+  return (
+    <div className="settings-drawer weread-drawer" role="dialog" aria-label="微信读书阅读">
+      <div className="settings-panel">
+        {body}
       </div>
       <button
         type="button"

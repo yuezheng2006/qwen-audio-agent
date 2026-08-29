@@ -50,6 +50,48 @@ export class MarkdownContentStore {
     }
   }
 
+  listBooks() {
+    const files = this.list()
+    const byRel = new Map(files.map(item => [item.relativePath, item]))
+    const claimed = new Set()
+    const books = []
+    if (existsSync(this.contentDir)) {
+      for (const entry of readdirSync(this.contentDir, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue
+        const catalogPath = join(this.contentDir, entry.name, 'CATALOG.json')
+        if (!existsSync(catalogPath)) continue
+        let catalog
+        try {
+          catalog = JSON.parse(readFileSync(catalogPath, 'utf8'))
+        } catch {
+          continue
+        }
+        const chapters = (catalog.chapters || []).map(chapter => {
+          const meta = byRel.get(chapter.relativePath)
+          if (meta) claimed.add(meta.id)
+          return {
+            order: chapter.order,
+            title: chapter.title,
+            relativePath: chapter.relativePath,
+            fileName: chapter.fileName,
+            id: meta?.id || null,
+            bytes: meta?.bytes || 0,
+          }
+        }).filter(chapter => chapter.id)
+        books.push({
+          slug: catalog.slug || entry.name,
+          title: catalog.title || entry.name,
+          catalog: true,
+          importedAt: catalog.importedAt || null,
+          chapterCount: chapters.length,
+          chapters,
+        })
+      }
+    }
+    const loose = files.filter(item => !claimed.has(item.id))
+    return { books, loose, count: books.length + (loose.length ? 1 : 0) }
+  }
+
   #files() {
     const files = []
     const walk = (dir) => {

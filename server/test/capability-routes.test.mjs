@@ -10,6 +10,7 @@ import { FrontendNotesStore } from '../src/conversation/frontend-notes.mjs'
 import { resolveMemoryProvider } from '../src/conversation/memory/resolve.mjs'
 import { createLocalKnowledgeProvider } from '../src/knowledge/local-provider.mjs'
 import { MarkdownContentStore } from '../src/voice/reader/content-store.mjs'
+import { createReaderProgressStore } from '../src/voice/reader/reader-progress.mjs'
 
 async function withApp(setup, run) {
   const root = mkdtempSync(join(tmpdir(), 'qwaudio-cap-'))
@@ -40,6 +41,19 @@ async function withApp(setup, run) {
       const task = scheduled.get(String(id))
       if (!task) return null
       if (ownerId !== undefined && task.ownerId !== ownerId) return null
+      return task
+    },
+    create({ objective, ownerId, sessionId, kind = 'work' }) {
+      const task = {
+        id: `work_live_${scheduled.size + 1}`,
+        status: 'queued',
+        kind,
+        objective,
+        ownerId,
+        sessionId: sessionId || 'main',
+        createdAt: Date.now(),
+      }
+      scheduled.set(task.id, task)
       return task
     },
     createScheduled({ objective, ownerId, schedule, type = 'reminder' }) {
@@ -263,14 +277,14 @@ test('weread routes expose shelf highlights and speak wav', async () => {
   })
 })
 
-test('content import rejects missing sourcePath and missing files', async () => {
+test('content import rejects missing source and missing files', async () => {
   await withApp(null, async ({ base, root }) => {
     const bad = await request(base, '/api/content/import', {
       method: 'POST',
       body: JSON.stringify({ title: 'x' }),
     })
     assert.equal(bad.status, 400)
-    assert.match(bad.payload.error, /sourcePath/)
+    assert.match(bad.payload.error, /sourcePath|markdown|url/)
 
     const missing = await request(base, '/api/content/import', {
       method: 'POST',
@@ -293,7 +307,9 @@ test('memory list/delete and content reader progress work', async () => {
     const listed = await request(base, '/api/memory')
     assert.equal(listed.status, 200)
     assert.ok(listed.payload.count >= 1)
-    const id = listed.payload.memories.find(item => item.scope === 'long_term')?.id
+    const id = listed.payload.memories.find(item => (
+      item.scope === 'long_term' || item.scope === 'memory'
+    ))?.id
     assert.ok(id)
 
     const cleared = await request(base, '/api/memory', { method: 'DELETE' })
@@ -342,7 +358,7 @@ test('memory write/patch notes reminders and content control', async () => {
       body: JSON.stringify({ scope: 'rules', content: '以后叫我峰哥' }),
     })
     assert.equal(created.status, 201)
-    assert.equal(created.payload.memory.scope, 'rules')
+    assert.equal(created.payload.memory.scope, 'user')
     const memoryId = created.payload.memory.id
 
     const patched = await request(base, `/api/memory/${encodeURIComponent(memoryId)}`, {
@@ -409,5 +425,59 @@ test('content control requires active reader session', async () => {
     })
     assert.equal(result.status, 409)
     assert.match(result.payload.error, /语音会话/)
+  })
+})
+
+test('content books import speak and support session', async () => {
+  await withApp(({ routeDeps, root }) => {
+    routeDeps.supportInboundToken = 'secret'
+    routeDeps.readerProgressStore = createReaderProgressStore({
+      filePath: join(root, 'progress.json'),
+    })
+    routeDeps.speakScript = async () => ({ wav: Buffer.from('RIFFtest') })
+  }, async ({ base }) => {
+    const imported = await request(base, '/api/content/import', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: '夜话',
+        markdown: '# 第一章 开端\n\n天黑了。风很大。\n\n# 第二章 远行\n\n他走了。\n',
+      }),
+    })
+    assert.equal(imported.status, 200)
+    assert.equal(imported.payload.ok, true)
+    assert.ok(imported.payload.chapters.length >= 2)
+
+    const books = await request(base, '/api/content/books')
+    assert.equal(books.status, 200)
+    assert.ok(books.payload.books.some(book => book.title === '夜话'))
+
+    const chapterId = books.payload.books.find(book => book.title === '夜话').chapters[0].id
+    const spoken = await fetch(`${base}/api/content/speak`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content_id: chapterId }),
+    })
+    assert.equal(spoken.status, 200)
+    assert.match(spoken.headers.get('content-type') || '', /audio\/wav/)
+
+    const saved = await request(base, '/api/content/progress', {
+      method: 'PUT',
+      body: JSON.stringify({ contentId: chapterId, index: 1, total: 4, title: '开端' }),
+    })
+    assert.equal(saved.status, 200)
+    assert.equal(saved.payload.cursor.index, 1)
+
+    const denied = await request(base, '/api/support/session?token=nope')
+    assert.equal(denied.status, 401)
+    const session = await request(base, '/api/support/session?token=secret')
+    assert.equal(session.status, 200)
+    assert.equal(session.payload.workspace, 'support')
+
+    const escalated = await request(base, '/api/support/escalate', {
+      method: 'POST',
+      body: JSON.stringify({ token: 'secret', objective: '查订单 123' }),
+    })
+    assert.equal(escalated.status, 201)
+    assert.match(escalated.payload.task.objective, /客服升级/)
   })
 })

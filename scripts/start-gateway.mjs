@@ -173,6 +173,7 @@ async function startGateway(modeArg) {
     'MINERU_API_URL',
     'CONTENT_DIR',
     'KNOWLEDGE_DIR',
+    'SUPPORT_INBOUND_TOKEN',
   ]) {
     if (fileEnv[key] !== undefined && fileEnv[key] !== '') {
       childEnv[key] = fileEnv[key]

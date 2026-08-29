@@ -1,0 +1,8 @@
+interface:
+  display_name: "图书带货视频"
+  short_description: "作者匹配 Voice Studio 配音，到可编辑图书带货视频初稿"
+  brand_color: "#D97706"
+  default_prompt: "使用 $book-sales-video，根据我提供的书名或飞书文案制作一条图书带货短视频；配音优先使用作者对应的 Voice Studio 音色。"
+
+policy:
+  allow_implicit_invocation: true

@@ -20,6 +20,11 @@ export const DEFAULT_DASHSCOPE_REALTIME_URL = 'wss://dashscope.aliyuncs.com/api-
 export const DEFAULT_SPEECH_TO_SPEECH_REALTIME_URL = 'ws://127.0.0.1:8765/v1/realtime'
 
 const PROVIDERS = Object.freeze({
+  cascade: Object.freeze({
+    key: 'cascade',
+    label: 'Cascade',
+    aliases: Object.freeze([]),
+  }),
   dashscope: Object.freeze({
     key: 'dashscope',
     label: 'DashScope',
@@ -116,21 +121,31 @@ export function resolveRealtimeFrontendConfiguration(env = process.env) {
     || clean(env.S2S_REALTIME_URL)
     || provider === 'speech-to-speech'
   )
+  const cascadeConfigured = Boolean(
+    dashscopeApiKey
+    || (
+      clean(env.CASCADE_STT_API_KEY)
+      && clean(env.CASCADE_LLM_API_KEY)
+      && clean(env.CASCADE_TTS_API_KEY || env.FISH_API_KEY)
+    ),
+  )
   const configured = provider === 'dashscope'
     ? Boolean(dashscopeApiKey)
-    : speechToSpeechConfigured
-  const identity = provider === 'dashscope'
+    : provider === 'cascade'
+      ? cascadeConfigured
+      : speechToSpeechConfigured
+  const identity = provider === 'speech-to-speech'
     ? {
-        provider,
-        endpoint: dashscopeRealtimeUrl,
-        model: dashscopeModel,
-        voice: dashscopeVoice,
-        credential: dashscopeApiKey,
-      }
-    : {
         provider,
         endpoint: speechToSpeechRealtimeUrl,
         credential: speechToSpeechAuthToken,
+      }
+    : {
+        provider,
+        endpoint: provider === 'cascade' ? 'cascade-local' : dashscopeRealtimeUrl,
+        model: dashscopeModel,
+        voice: dashscopeVoice,
+        credential: dashscopeApiKey,
       }
   const signature = createHash('sha256')
     .update(JSON.stringify(identity))
@@ -148,8 +163,8 @@ export function resolveRealtimeFrontendConfiguration(env = process.env) {
     speechToSpeechRealtimeUrl,
     speechToSpeechAuthToken,
     speechToSpeechConfigured,
-    missingConfigurationMessage: provider === 'dashscope'
-      ? '缺少 DASHSCOPE_API_KEY。请运行 qwenaudio config 查看配置文件位置。'
-      : `无法使用 ${PROVIDERS[provider].label} 前台，请检查其服务地址和配置。`,
+    missingConfigurationMessage: provider === 'speech-to-speech'
+      ? `无法使用 ${PROVIDERS[provider].label} 前台，请检查其服务地址和配置。`
+      : '缺少 DASHSCOPE_API_KEY（或 CASCADE_*_API_KEY / FISH_API_KEY）。请运行 qwenaudio config 查看配置文件位置。',
   }
 }

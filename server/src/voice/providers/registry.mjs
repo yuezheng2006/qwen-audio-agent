@@ -2,6 +2,7 @@ import { config } from '../../core/config.mjs'
 import {
   listDashScopeRealtimeModelProfiles,
 } from '../../../../shared/realtime-provider-catalog.mjs'
+import { cascadeProvider } from './cascade.mjs'
 import { dashscopeProvider } from './dashscope.mjs'
 import { s2sProvider } from './s2s.mjs'
 import { createRealtimeProviderRegistry } from './provider-registry.mjs'
@@ -14,7 +15,7 @@ export {
 } from './provider-registry.mjs'
 
 export const defaultRealtimeProviderRegistry = createRealtimeProviderRegistry({
-  providers: [dashscopeProvider, s2sProvider],
+  providers: [dashscopeProvider, cascadeProvider, s2sProvider],
 })
 
 export function resolveRealtimeProvider(requested) {
@@ -75,6 +76,7 @@ export function describeActiveRealtime(requested, {
  */
 export const REALTIME_PROVIDERS = Object.freeze({
   dashscope: dashscopeProvider,
+  cascade: cascadeProvider,
   'speech-to-speech': s2sProvider,
   qwen: dashscopeProvider,
   s2s: s2sProvider,

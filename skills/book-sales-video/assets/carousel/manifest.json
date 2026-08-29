@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "kind": "book-cover-carousel",
+  "directory": "covers",
+  "minimumCoverCount": 0,
+  "countPolicy": "derive-from-selected-audio-peaks",
+  "timing": {
+    "mode": "audio-beat-driven",
+    "referenceIntervalSeconds": [0.13, 0.17],
+    "referenceTotalSeconds": [0.8, 1.0]
+  },
+  "openchatcutSoundAssets": {
+    "carousel": {
+      "name": "Mechanical Clicking Loop",
+      "assetId": "library:sound:mechanical-clicking-loop",
+      "anchorSeconds": 0.085
+    },
+    "bookReveal": {
+      "name": "Cash Register Success",
+      "assetId": "library:sound:cash-register-success",
+      "anchorSeconds": 0.429
+    }
+  },
+  "usageRule": "Only use images the user owns or is authorized to use. Determine the required count after selecting the real sound effect and detecting usable peaks.",
+  "covers": []
+}

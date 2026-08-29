@@ -2,6 +2,7 @@ import {
   createLocalKnowledgeProvider,
   createNoneKnowledgeProvider,
 } from './local-provider.mjs'
+import { createWeknoraProviderFromConfig } from './weknora-provider.mjs'
 import { KNOWLEDGE_PROVIDER_KINDS, assertKnowledgeProvider } from './provider.mjs'
 
 export function resolveKnowledgeProviderKind(raw = process.env.KNOWLEDGE_PROVIDER) {
@@ -20,6 +21,12 @@ export function resolveKnowledgeProvider(config = {}, env = process.env) {
   )
   if (kind === 'none') {
     return assertKnowledgeProvider(createNoneKnowledgeProvider(), 'none')
+  }
+  if (kind === 'weknora') {
+    return assertKnowledgeProvider(
+      createWeknoraProviderFromConfig(config, env),
+      'weknora',
+    )
   }
   return assertKnowledgeProvider(createLocalKnowledgeProvider({
     knowledgeDir: config.knowledgeDir,

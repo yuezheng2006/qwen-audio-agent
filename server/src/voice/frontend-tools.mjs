@@ -466,6 +466,13 @@ export function frontendTools(agentContext = {}) {
     : tools
 }
 
+// Compatibility entrypoint for the local Cascade provider and older clients.
+// Keep the implementation centralized in frontendTools so both paths expose
+// the same builtin and dynamically configured tools.
+export function getRealtimeTools(agentContext = {}) {
+  return frontendTools(agentContext)
+}
+
 export const resultResponseInstructions = [
   '这是先前提交工作的最终结果，不是用户的新请求。',
   '把 result 当作事实材料，结合当前对话自然回应；可以按语境概括、合并、承接或询问必要信息，避免重复已经表达过的内容。',

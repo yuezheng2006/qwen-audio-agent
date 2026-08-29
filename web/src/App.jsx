@@ -1345,33 +1345,32 @@ export default function App() {
     desktopOrbMode ? ' desktop-conversation-panel' : ''
   }`}>
     <header>
-      <div className="brand"><span>V</span><div>qwen-audio-agent<small>REALTIME VOICE · LIVE</small></div></div>
-      <a
-        className="backend"
-        href={backend.url || undefined}
-        target="_blank"
-        rel="noreferrer"
-        title={backend.url ? t('打开 {label}', { label: backend.label }) : backend.label}
-      >
-        <i className={backend.ready ? 'ready' : ''} />
-        {backend.label}
-      </a>
-      <div className="model-status" title={modelStatus.id}>
-        <b>{modelStatus.label || t('模型信息不可用')}</b>
-        {modelStatus.metadataStatus === 'current'
-          ? <>
-              <small>{t('模型支持：{modes}', {
-                modes: modeList(modelStatus.modelInputModes),
-              })}</small>
-              <small>{t('Web 传输：{modes}', {
-                modes: modeList(modelStatus.transportInputModes),
-              })}</small>
-            </>
-          : <small>{t('模型能力信息不可用')}</small>}
-        {providerNotice && <small className="provider-notice" role="status">
-          {t(providerNotice)}
-        </small>}
+      <div className="topbar-meta">
+        <div className="brand"><span>V</span><div>qwen-audio-agent<small>REALTIME VOICE · LIVE</small></div></div>
+        <a
+          className="backend"
+          href={backend.url || undefined}
+          target="_blank"
+          rel="noreferrer"
+          title={backend.url ? t('打开 {label}', { label: backend.label }) : backend.label}
+        >
+          <i className={backend.ready ? 'ready' : ''} />
+          {backend.label}
+        </a>
+        <div className="model-status" title={modelStatus.id}>
+          <b>{modelStatus.label || t('模型信息不可用')}</b>
+          <small>{modelStatus.metadataStatus === 'current'
+            ? modeList(modelStatus.modelInputModes)
+            : t('模型能力信息不可用')}</small>
+          {providerNotice && <small className="provider-notice" role="status">
+            {t(providerNotice)}
+          </small>}
+        </div>
       </div>
+      <div className="topbar-actions">
+        <div className="status">
+          <i className={orbVisualState} /><span>{labelFor(orbVisualState)}</span>
+        </div>
       {realtimeProviders.length > 1 && <select
         className="ghost frontend-provider"
         value={realtimeProvider}
@@ -1384,9 +1383,6 @@ export default function App() {
           {t('前台：{label}', { label: item.label })}
         </option>)}
       </select>}
-      <div className="status">
-        <i className={orbVisualState} /><span>{labelFor(orbVisualState)}</span>
-      </div>
       {/* 资料库入口只在 web 模式给：桌面悬浮球的 header 已经紧到把「新会话」
           压成一个「＋」，再塞一个文字按钮会挤掉语音按钮 */}
       {!desktopOrbMode && (
@@ -1399,11 +1395,11 @@ export default function App() {
         </button>
       )}
       <button
-        className={`ghost${desktopOrbMode ? ' desktop-new-session' : ''}`}
+        className={`ghost session-action${desktopOrbMode ? ' desktop-new-session' : ''}`}
         onClick={resetSession}
         aria-label={t('新会话')}
         title={desktopOrbMode ? t('新会话') : undefined}
-      >{desktopOrbMode ? '＋' : t('新会话')}</button>
+      ><span className="action-icon" aria-hidden="true">＋</span><span className="action-label">{t('新会话')}</span></button>
       <button
         className={[
           'voice',
@@ -1426,11 +1422,10 @@ export default function App() {
           enableVoice()
         }}
       >
-        {desktopOrbMode
-          ? <OrbControlIcon type="microphone" muted={!voiceEnabled} />
-          : voiceEnabled
-            ? t('麦克风静音')
-            : waitingForVoice ? t('取消等待') : t('开启麦克风')}
+        <OrbControlIcon type="microphone" muted={!voiceEnabled} />
+        <span className="action-label">{voiceEnabled
+          ? t('麦克风静音')
+          : waitingForVoice ? t('取消等待') : t('开启麦克风')}</span>
       </button>
       {desktopOrbMode && <button
         className="ghost desktop-panel-collapse"
@@ -1439,6 +1434,7 @@ export default function App() {
       >
         <OrbControlIcon type="collapse" />
       </button>}
+      </div>
     </header>
 
     <section className="workspace">

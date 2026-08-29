@@ -55,10 +55,17 @@ test('clone preset with mock provider then confirm persists voice', async () => 
     const confirmed = await service.confirm('owner', { profile_id: cloned.profile.id })
     assert.equal(confirmed.status, 'ok')
     assert.equal(confirmed.profile.status, 'confirmed')
+    assert.equal(confirmed.switching, false)
     assert.deepEqual(calls, [
-      ['persist', { provider: 'dashscope', voice: 'v1' }],
-      ['restart', undefined],
+      ['persist', { provider: 'dashscope', voice: 'v1', voiceLabel: '测试音色' }],
     ])
+
+    const confirmedRestart = await service.confirm('owner', {
+      profile_id: cloned.profile.id,
+      restart: true,
+    })
+    assert.equal(confirmedRestart.switching, true)
+    assert.deepEqual(calls.at(-1), ['restart', undefined])
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -167,6 +174,7 @@ test('confirm resets the model when switching providers without a profile target
       provider: 'fish',
       model: 's2.1-pro-free',
       voice: 'ref-1',
+      voiceLabel: 'Fish 音色',
     }])
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -247,7 +255,11 @@ test('import voice creates a ready profile and confirm can skip restart', async 
     })
     assert.equal(confirmed.status, 'ok')
     assert.equal(confirmed.profile.status, 'confirmed')
-    assert.deepEqual(persisted, [{ provider: 'listenhub', voice: 'speaker-1' }])
+    assert.deepEqual(persisted, [{
+      provider: 'listenhub',
+      voice: 'speaker-1',
+      voiceLabel: '导入音色',
+    }])
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -319,7 +331,11 @@ test('confirm resolves a ready profile by provider and remote voice id', async (
     })
     assert.equal(result.status, 'ok')
     assert.equal(result.profile.id, profile.id)
-    assert.deepEqual(persisted, [{ provider: 'mock', voice: 'voice-1' }])
+    assert.deepEqual(persisted, [{
+      provider: 'mock',
+      voice: 'voice-1',
+      voiceLabel: 'voice',
+    }])
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

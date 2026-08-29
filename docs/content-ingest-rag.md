@@ -68,6 +68,15 @@ Content-Type: application/json
 
 标签与 Plus/Flash 仍走现有 TTS 插件；播长篇默认 Flash，情绪标签少用。
 
+## 与 WeKnora 的分工
+
+- **MinerU / `CONTENT_DIR`**：个人机大文件进朗读管道（`content_control`）。
+- **WeKnora**：企业/飞书素材的权威检索；语音只走 `knowledge_search`。
+- **本地 `KNOWLEDGE_DIR`**：可读备份与离线兜底（`WEKNORA_FALLBACK_LOCAL=1`）。
+- 双库短暂不一致时，在线以 WeKnora 为准。管理台不进本仓 WebUI。
+
+旁路 PoC 与 document-buddy 只读投影见 [examples/knowledge/README.md](../examples/knowledge/README.md)。
+
 ## 参考
 
 - MinerU：https://github.com/opendatalab/MinerU

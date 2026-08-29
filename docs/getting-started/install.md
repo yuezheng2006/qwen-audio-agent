@@ -18,6 +18,9 @@ You can also install the latest code directly from GitHub:
 npm install -g git+https://github.com/QwenAudio/qwen-audio-agent.git
 ```
 
+Self-hosted Docker (frontend-only, HTTPS reverse proxy) is documented in
+[install.zh.md](install.zh.md#云主机-15-分钟自托管-docker) and `deploy/`.
+
 ## Install from Source
 
 ```bash

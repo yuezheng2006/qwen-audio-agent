@@ -1,0 +1,42 @@
+{
+	email {$CADDY_EMAIL}
+}
+
+(gateway_proxy) {
+	reverse_proxy gateway:3101 {
+		header_up Host {host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-For {remote_host}
+		flush_interval -1
+	}
+}
+
+{$SITE_ADDRESS} {
+	encode gzip zstd
+
+	@health path /livez /readyz
+	handle @health {
+		import gateway_proxy
+	}
+
+	# Public support inbound: page, assets, session/escalate, and the
+	# websocket only when the client advertises workspace=support.
+	@support path /support /support/* /api/support /api/support/* /assets /assets/*
+	@support_ws {
+		path /api/realtime
+		query workspace=support
+	}
+	handle @support {
+		import gateway_proxy
+	}
+	handle @support_ws {
+		import gateway_proxy
+	}
+
+	handle {
+		basic_auth {
+			{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+		}
+		import gateway_proxy
+	}
+}

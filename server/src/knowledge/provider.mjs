@@ -7,7 +7,7 @@
  *   health()
  */
 
-export const KNOWLEDGE_PROVIDER_KINDS = ['local', 'none']
+export const KNOWLEDGE_PROVIDER_KINDS = ['local', 'none', 'weknora']
 
 export function assertKnowledgeProvider(provider, kind = 'unknown') {
   if (!provider || typeof provider !== 'object') {

@@ -1,0 +1,57 @@
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3101
+      AGENT_PROTOCOL: ${AGENT_PROTOCOL:-none}
+      QWAUDIO_CONFIG_DIR: /data
+    volumes:
+      - qwaudio-data:/data
+    expose:
+      - "3101"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3101/livez').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10-alpine
+    depends_on:
+      gateway:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      CADDY_EMAIL: ${CADDY_EMAIL:-}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.insecure:/etc/caddy/Caddyfile.insecure:ro
+      - ./caddy-boot.sh:/etc/caddy/boot.sh:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    entrypoint: ["/bin/sh", "/etc/caddy/boot.sh"]
+    restart: unless-stopped
+
+volumes:
+  qwaudio-data:
+  caddy-data:
+  caddy-config:

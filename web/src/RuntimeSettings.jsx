@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { knowledgeHealthSummary } from './knowledge-health.js'
 
-const TTS_PROVIDERS = ['dashscope', 'voicebox', 'fish', 'listenhub', 'minimax']
 const MEMORY_SCOPES = [
   { id: 'all', label: '全部' },
   { id: 'profile', label: '档案' },
@@ -8,14 +8,14 @@ const MEMORY_SCOPES = [
   { id: 'rules', label: '约定' },
 ]
 const SECTIONS = [
-  { id: 'mode', label: '模式' },
-  { id: 'tts', label: 'TTS' },
-  { id: 'memory', label: '记忆' },
-  { id: 'notes', label: '清单' },
-  { id: 'reminders', label: '提醒' },
-  { id: 'knowledge', label: '知识' },
-  { id: 'reader', label: '朗读' },
-  { id: 'skills', label: '能力' },
+  { id: 'mode', label: '模式', guide: '选择级联 cascade（推荐）或低延迟 S2S。切换会重启 Gateway。' },
+  { id: 'tts', label: '音色', guide: '试听与选用已迁至「语音工作室」；此处仅查看当前音色。' },
+  { id: 'memory', label: '记忆', guide: '查看、添加或清理长期记忆与约定。' },
+  { id: 'notes', label: '清单', guide: '管理购物清单等短条目。' },
+  { id: 'reminders', label: '提醒', guide: '创建到点提醒或定时任务。' },
+  { id: 'knowledge', label: '知识', guide: '查看本地 Markdown 或 WeKnora 旁路状态，必要时试搜或重建本地索引。' },
+  { id: 'reader', label: '朗读', guide: '章节朗读已迁至「阅读」；此处仅查看进度。' },
+  { id: 'skills', label: '能力', guide: '查看已加载的 Skills 与可用工具。' },
 ]
 
 async function readJson(response) {
@@ -26,20 +26,26 @@ async function readJson(response) {
   return payload
 }
 
+function shortToken(value, max = 28) {
+  const text = String(value || '').trim()
+  if (!text || text.length <= max) return text
+  return `${text.slice(0, Math.max(8, max - 10))}…${text.slice(-8)}`
+}
+
 function cascadeVoiceHint(runtime) {
   const provider = runtime?.cascade?.ttsProvider || 'tts'
-  const model = runtime?.cascade?.tts || 'model'
+  const model = shortToken(runtime?.cascade?.tts || 'model', 22)
   const voice = runtime?.cascade?.voiceLabel
     || runtime?.realtimeVoiceLabel
-    || runtime?.cascade?.voice
-    || runtime?.realtimeVoice
-    || '未配置音色'
+    || shortToken(runtime?.cascade?.voice || runtime?.realtimeVoice || '未配置音色', 22)
   return `VAD→STT→LLM→TTS · ${provider} · ${model} · ${voice}`
 }
 
 function s2sVoiceHint(runtime) {
-  const voice = runtime?.realtimeVoiceLabel || runtime?.realtimeVoice || '系统音色'
-  const model = runtime?.realtimeModel || 'Realtime'
+  const voice = runtime?.realtimeVoiceLabel
+    || shortToken(runtime?.realtimeVoice, 22)
+    || '系统音色'
+  const model = shortToken(runtime?.realtimeModel || 'Realtime', 28)
   return `${model} · ${voice}`
 }
 
@@ -78,6 +84,9 @@ export default function RuntimeSettings({
   runtime,
   onRuntimeChange,
   onModeSwitching,
+  onOpenVoiceStudio,
+  onOpenReading,
+  initialSection = '',
 }) {
   const [section, setSection] = useState('mode')
   const [memories, setMemories] = useState([])
@@ -103,11 +112,6 @@ export default function RuntimeSettings({
   const [skills, setSkills] = useState(null)
   const [capabilities, setCapabilities] = useState(null)
   const [modeDraft, setModeDraft] = useState(runtime?.frontendMode || 'cascade')
-  const [ttsDraft, setTtsDraft] = useState({
-    provider: runtime?.cascade?.ttsProvider || 'dashscope',
-    model: runtime?.cascade?.tts || '',
-    voice: runtime?.cascade?.voice || runtime?.realtimeVoice || '',
-  })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -154,11 +158,9 @@ export default function RuntimeSettings({
   useEffect(() => {
     if (!open) return undefined
     setModeDraft(runtime?.frontendMode || 'cascade')
-    setTtsDraft({
-      provider: runtime?.cascade?.ttsProvider || 'dashscope',
-      model: runtime?.cascade?.tts || '',
-      voice: runtime?.cascade?.voice || runtime?.realtimeVoice || '',
-    })
+    if (initialSection && SECTIONS.some(item => item.id === initialSection)) {
+      setSection(initialSection)
+    }
     setError('')
     let cancelled = false
     Promise.all([
@@ -174,11 +176,8 @@ export default function RuntimeSettings({
     }
   }, [
     open,
+    initialSection,
     runtime?.frontendMode,
-    runtime?.cascade?.ttsProvider,
-    runtime?.cascade?.tts,
-    runtime?.cascade?.voice,
-    runtime?.realtimeVoice,
     refreshMemories,
     refreshNotes,
     refreshReminders,
@@ -212,26 +211,6 @@ export default function RuntimeSettings({
         const next = await waitForHealth(health => health.frontendMode === modeDraft)
         onRuntimeChange?.(next)
         onClose?.()
-      } finally {
-        onModeSwitching?.(false)
-      }
-    })
-  }
-
-  const applyTts = async () => {
-    await run(async () => {
-      onModeSwitching?.(true)
-      try {
-        await readJson(await fetch('api/runtime/cascade-tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(ttsDraft),
-        }))
-        const next = await waitForHealth(health => (
-          health.frontendMode === 'cascade'
-          && (!ttsDraft.provider || health.cascade?.ttsProvider === ttsDraft.provider)
-        ))
-        onRuntimeChange?.(next)
       } finally {
         onModeSwitching?.(false)
       }
@@ -381,22 +360,7 @@ export default function RuntimeSettings({
     })
   }
 
-  const controlReader = async (action, extra = {}) => {
-    await run(async () => {
-      const payload = await readJson(await fetch('api/content/control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...extra }),
-      }))
-      if (payload.progress) {
-        setContent(current => ({
-          ...(current || {}),
-          reader: payload.progress,
-        }))
-      }
-      await refreshLibraries()
-    })
-  }
+  const knowledgeSummary = knowledgeHealthSummary(knowledge?.health)
 
   return (
     <div className="settings-drawer" role="dialog" aria-label="语音设置">
@@ -419,6 +383,9 @@ export default function RuntimeSettings({
             </button>
           ))}
         </nav>
+        <p className="settings-section-guide">
+          {SECTIONS.find(item => item.id === section)?.guide || ''}
+        </p>
 
         {section === 'mode' && (
           <section>
@@ -460,63 +427,52 @@ export default function RuntimeSettings({
               {busy ? '切换中…' : '应用并重启 Gateway'}
             </button>
             <p className="voice-line">
-              <b>{runtime?.realtimeVoiceLabel || '未配置'}</b>
-              <small>{runtime?.realtimeVoice || ''}</small>
+              <b>
+                当前音色：
+                {runtime?.cascade?.voiceLabel
+                  || runtime?.realtimeVoiceLabel
+                  || '未命名音色'}
+              </b>
+              <small>
+                {shortToken(
+                  runtime?.cascade?.voice || runtime?.realtimeVoice || '',
+                  40,
+                )}
+                {' · 试听与切换请打开「语音工作室」'}
+              </small>
             </p>
           </section>
         )}
 
         {section === 'tts' && (
-          <section>
-            <h3>Cascade TTS</h3>
-            {runtime?.frontendMode !== 'cascade' ? (
-              <p className="hint">当前非 cascade 模式，请先切换模式。</p>
-            ) : (
-              <>
-                <label className="settings-field">
-                  <span>Provider</span>
-                  <select
-                    value={ttsDraft.provider}
-                    disabled={busy}
-                    onChange={event => setTtsDraft(current => ({
-                      ...current,
-                      provider: event.target.value,
-                    }))}
-                  >
-                    {TTS_PROVIDERS.map(id => (
-                      <option key={id} value={id}>{id}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="settings-field">
-                  <span>Model</span>
-                  <input
-                    value={ttsDraft.model}
-                    disabled={busy}
-                    onChange={event => setTtsDraft(current => ({
-                      ...current,
-                      model: event.target.value,
-                    }))}
-                    placeholder="qwen-audio-3.0-tts-flash"
-                  />
-                </label>
-                <label className="settings-field">
-                  <span>Voice ID</span>
-                  <input
-                    value={ttsDraft.voice}
-                    disabled={busy}
-                    onChange={event => setTtsDraft(current => ({
-                      ...current,
-                      voice: event.target.value,
-                    }))}
-                    placeholder="音色 ID"
-                  />
-                </label>
-                <button className="primary" disabled={busy} onClick={applyTts}>
-                  {busy ? '应用中…' : '应用 TTS 并重启'}
-                </button>
-              </>
-            )}
+          <section className="voice-tts-jump">
+            <div className="voice-now-card">
+              <span className="voice-now-label">当前使用</span>
+              <strong>
+                {runtime?.cascade?.voiceLabel
+                  || runtime?.realtimeVoiceLabel
+                  || '未命名音色'}
+              </strong>
+              <small>
+                {(runtime?.cascade?.ttsProvider || 'dashscope')}
+                {' · '}
+                {shortToken(runtime?.cascade?.voice || runtime?.realtimeVoice || '', 36)}
+              </small>
+            </div>
+            <p className="hint">
+              声音库与克隆入口已固定在「语音工作室」。
+            </p>
+            <button
+              type="button"
+              className="primary"
+              disabled={busy}
+              onClick={() => {
+                onClose?.()
+                onOpenVoiceStudio?.('gallery')
+              }}
+            >
+              打开语音工作室
+            </button>
           </section>
         )}
 
@@ -794,7 +750,9 @@ export default function RuntimeSettings({
           <section>
             <h3>知识库</h3>
             <p className="hint">
-              {knowledge?.health?.knowledgeDir || '未配置'}
+              <span className={knowledgeSummary.ok ? 'health-ok' : 'health-warn'}>
+                {knowledgeSummary.label}
+              </span>
               {' · '}
               {knowledge?.count ?? 0} 篇
             </p>
@@ -852,31 +810,20 @@ export default function RuntimeSettings({
                 <> · {content.reader.index}/{content.reader.total}</>
               )}
             </p>
+            <p>书架、导入和章节续听已放到顶层「阅读」。</p>
             <div className="row-actions">
-              <button className="ghost" disabled={busy} onClick={() => controlReader('pause')}>暂停</button>
-              <button className="ghost" disabled={busy} onClick={() => controlReader('resume')}>继续</button>
-              <button className="ghost" disabled={busy} onClick={() => controlReader('stop')}>停止</button>
+              <button
+                className="ghost"
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  onClose?.()
+                  onOpenReading?.('shelf')
+                }}
+              >
+                打开阅读
+              </button>
             </div>
-            <ul className="memory-list">
-              {(content?.contents || []).slice(0, 12).map(item => (
-                <li key={item.id}>
-                  <div>
-                    <b>md</b>
-                    <span>{item.relativePath || item.title}</span>
-                  </div>
-                  <button
-                    className="ghost"
-                    disabled={busy}
-                    onClick={() => controlReader('start_read', { content_id: item.id })}
-                  >
-                    朗读
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {!content?.contents?.length && (
-              <div className="empty-memories">暂无可读 md</div>
-            )}
           </section>
         )}
 

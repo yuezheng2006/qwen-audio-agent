@@ -1,0 +1,14 @@
+{
+  "name": "document_buddy",
+  "command": "python",
+  "args": ["-m", "work_memory.mcp_server"],
+  "env": {
+    "WORK_MEMORY_DATA_DIR": "/path/to/document-buddy-data"
+  },
+  "whitelist": [
+    "query_project_wiki",
+    "get_cited_context",
+    "list_review_items"
+  ],
+  "allowDangerous": false
+}

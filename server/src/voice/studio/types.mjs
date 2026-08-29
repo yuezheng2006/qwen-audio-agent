@@ -21,6 +21,8 @@ export function serializeProfile(profile) {
     createdAt,
     updatedAt,
     confirmedAt,
+    favorite,
+    tags,
   } = profile
   return {
     id,
@@ -33,6 +35,8 @@ export function serializeProfile(profile) {
     error: error ?? null,
     createdAt,
     updatedAt,
+    favorite: Boolean(favorite),
+    tags: Array.isArray(tags) ? tags.map(String) : [],
     ...(confirmedAt ? { confirmedAt } : {}),
     remote_voice_id: remoteId ?? null,
   }

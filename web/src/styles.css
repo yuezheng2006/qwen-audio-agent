@@ -246,14 +246,29 @@ html[data-desktop="orb"] .settings-drawer {
 }
 
 header {
-  height: 68px;
-  padding: 0 28px;
+  height: 72px;
+  padding: 0 32px;
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 24px;
   border-bottom: 1px solid #ffffff12;
   background: #0a0b10c9;
   backdrop-filter: blur(18px);
+}
+
+.topbar-meta,
+.topbar-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.topbar-meta { flex: 1 1 auto; gap: 22px; }
+.topbar-actions {
+  flex: 0 0 auto;
+  gap: 10px;
+  margin-left: auto;
+  padding-left: 22px;
+  border-left: 1px solid #ffffff12;
 }
 
 .brand { display: flex; align-items: center; gap: 11px; font-weight: 700; }
@@ -268,12 +283,12 @@ header {
 .backend { text-decoration: none; }
 a.backend:hover { color: #d6d2df; }
 span.backend { cursor: default; }
-.backend { margin-left: auto; padding-right: 11px; border-right: 1px solid #ffffff12; }
+.backend { padding-right: 22px; }
 .backend i, .status i { width: 7px; height: 7px; border-radius: 50%; background: #555; }
 .backend i.ready { background: #50dfab; box-shadow: 0 0 12px #50dfab; }
 .model-status {
   min-width: 0;
-  max-width: 270px;
+  max-width: min(31vw, 360px);
   display: grid;
   gap: 2px;
   color: #9795a0;
@@ -300,6 +315,12 @@ span.backend { cursor: default; }
 .status i.speaking { background: #9a7dff; box-shadow: 0 0 12px #9a7dff; }
 .status i.error { background: #ff6f78; box-shadow: 0 0 12px #ff6f78; }
 header button { padding: 9px 13px; border-radius: 10px; color: #ddd; border: 1px solid #ffffff18; background: #ffffff08; }
+header .session-action,
+header .voice { display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
+header .session-action { color: #bdb8c9; }
+header .voice svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+.frontend-provider { max-width: min(23vw, 290px); overflow: hidden; text-overflow: ellipsis; }
+.action-icon { font-size: 18px; line-height: 1; }
 header .voice.active { color: white; border-color: #785cf4; background: #785cf4; }
 header .voice.waiting { color: #ded5ff; border-color: #927cf480; }
 header .ghost.active { color: white; border-color: #785cf480; background: #785cf42e; }
@@ -1312,8 +1333,18 @@ article.user .message-body .inline-code { background: #5e44c9; color: #f0eaff; }
 }
 
 @media (max-width: 600px) {
-  header { padding: 0 14px; }
-  .brand small, header .ghost, .backend, .model-status small { display: none; }
+  header { height: 64px; padding: 0 14px; gap: 12px; }
+  .brand small, .backend, .model-status small { display: none; }
+  .topbar-meta { gap: 0; }
+  .topbar-actions { padding-left: 0; border-left: 0; }
+  .topbar-actions { gap: 5px; }
+  .topbar-actions .status { display: none; }
+  header .session-action,
+  header .voice { width: 36px; height: 36px; padding: 0; }
+  header .session-action .action-label,
+  header .voice .action-label { display: none; }
+  header .session-action .action-icon { font-size: 21px; }
+  header .voice svg { width: 17px; height: 17px; }
   .model-status { max-width: min(42vw, 220px); }
   .workspace { padding: 24px 0 14px; }
   .orb:not(.desktop-orb) { width: 92px; height: 92px; }

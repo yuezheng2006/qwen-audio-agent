@@ -47,6 +47,7 @@ export function listCascadeTtsPassthroughEnvKeys() {
     'CASCADE_TTS_MODEL',
     'CASCADE_TTS_VOICE_ID',
     'CASCADE_TTS_VOICE',
+    'CASCADE_TTS_VOICE_LABEL',
     'CASCADE_TTS_API_KEY',
     'CASCADE_TTS_INSTRUCTION',
     'CASCADE_TTS_LATENCY',
@@ -65,10 +66,12 @@ export function resolveCascadeTtsPluginConfig(env = {}, sharedKey = '') {
     voice: env.CASCADE_TTS_VOICE_ID || env.CASCADE_TTS_VOICE || 'longanhuan_v3.6',
     apiKey: env.CASCADE_TTS_API_KEY || sharedKey,
   }
+  const voiceLabel = String(env.CASCADE_TTS_VOICE_LABEL || '').trim() || null
   return {
     provider,
     sampleRate: 24000,
     ...resolved,
+    voiceLabel,
   }
 }
 

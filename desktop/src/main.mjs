@@ -100,6 +100,7 @@ import {
 import {
   backfillSharedAssets,
   resolveDesktopConfigDirectory,
+  seedVoiceProfilesFromLegacy,
 } from './config-migration.mjs'
 import {
   createDesktopUpdater,
@@ -133,6 +134,10 @@ if (!process.env.QWAUDIO_DATA_DIR) {
 const assetBackfill = backfillSharedAssets({
   desktopDir: process.env.QWAUDIO_CONFIG_DIR,
   dataDir: process.env.QWAUDIO_DATA_DIR,
+})
+const voiceProfileSeed = seedVoiceProfilesFromLegacy({
+  legacyDir: legacyConfigDirectory,
+  targetDir: process.env.QWAUDIO_CONFIG_DIR,
 })
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -184,6 +189,12 @@ if (assetBackfill.backfilled) {
     dataDir: process.env.QWAUDIO_DATA_DIR,
     files: assetBackfill.copied,
     skipped: assetBackfill.skipped,
+  })
+}
+if (voiceProfileSeed.seeded) {
+  logger.info('desktop.voice_profiles_seeded', {
+    legacyDir: legacyConfigDirectory,
+    files: voiceProfileSeed.copied,
   })
 }
 const fallbackPage = resolve(here, 'orb-unavailable.html')

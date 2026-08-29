@@ -1,6 +1,16 @@
 import { createSampleResolver } from './sample-resolver.mjs'
 import { createAsrService } from './asr.mjs'
 import { normalizeProviderError } from './providers/contract.mjs'
+import {
+  computeTagCounts,
+  filterGalleryProfiles,
+} from './profile-store.mjs'
+import {
+  previewCapable,
+  qualityTipsFor,
+  sampleHintsToSnake,
+} from './quality-tips.mjs'
+import { PREVIEW_TEXT } from './preview.mjs'
 import { serializeProfile } from './types.mjs'
 
 function failure(errorCode, userMessage, retryable = false) {
@@ -242,8 +252,14 @@ export function createVoiceStudioService({
           provider,
           ...(model ? { model } : {}),
           voice: remoteId,
+          // Switching voice also switches speaking persona (Role block).
+          voiceLabel: displayLabel(profile.label, remoteId),
         })
-        if (input.restart !== false) restartGateway()
+        // Prefer live apply (persistCascadeTts may hot-patch config). Full
+        // process restart is opt-in — desktop embedded Gateway ignores
+        // scripts/start-gateway.mjs and would otherwise keep the old voice.
+        const shouldRestart = input.restart === true
+        if (shouldRestart) restartGateway()
         const updated = profile
           ? store.updateStatus(ownerId, profile.id, {
             status: 'confirmed',
@@ -253,7 +269,7 @@ export function createVoiceStudioService({
           : null
         return {
           status: 'ok',
-          switching: input.restart !== false,
+          switching: shouldRestart,
           profile: serializeProfile(updated),
           provider,
           remote_voice_id: remoteId,
@@ -263,8 +279,62 @@ export function createVoiceStudioService({
       }
     },
 
-    list(ownerId, { status } = {}) {
-      return { status: 'ok', profiles: store.list(ownerId, { status }).map(serializeProfile) }
+    list(ownerId, { status, favorite, tag, q } = {}) {
+      const statusFilter = String(status || '').trim()
+      const base = store.list(ownerId, statusFilter ? { status: statusFilter } : {})
+      const tag_counts = computeTagCounts(base)
+      const profiles = filterGalleryProfiles(base, { favorite, tag, q }).map(serializeProfile)
+      return { status: 'ok', profiles, tag_counts }
+    },
+
+    patch(ownerId, id, patch = {}) {
+      const profileId = String(id || '').trim()
+      if (!profileId) return failure('profile_not_found', '未找到音色 profile。')
+      const hasFavorite = Object.prototype.hasOwnProperty.call(patch, 'favorite')
+      const hasTags = Object.prototype.hasOwnProperty.call(patch, 'tags')
+      const hasLabel = Object.prototype.hasOwnProperty.call(patch, 'label')
+      if (!hasFavorite && !hasTags && !hasLabel) {
+        return failure('invalid_patch', '至少提供 favorite、tags 或 label。')
+      }
+      try {
+        const row = store.patch(ownerId, profileId, {
+          ...(hasFavorite ? { favorite: patch.favorite } : {}),
+          ...(hasTags ? { tags: patch.tags } : {}),
+          ...(hasLabel ? { label: patch.label } : {}),
+        })
+        if (!row) return failure('profile_not_found', '未找到音色 profile。')
+        return { status: 'ok', profile: serializeProfile(row) }
+      } catch (error) {
+        if (error?.code === 'invalid_tags') {
+          return failure('invalid_tags', error.message || '标签不合法。')
+        }
+        throw error
+      }
+    },
+
+    capabilities() {
+      const entries = providers instanceof Map
+        ? [...providers.entries()]
+        : Object.entries(providers || {})
+      const list = entries.map(([id, provider]) => {
+        const caps = provider?.capabilities?.() || {}
+        const canPreview = previewCapable(id)
+        return {
+          id: String(id),
+          can_enroll: Boolean(caps.canEnroll),
+          can_import_id: Boolean(caps.canImportId),
+          can_preview: canPreview,
+          needs_public_url: Boolean(caps.needsPublicUrl),
+          sample_hints: sampleHintsToSnake(caps.sampleHints || {}),
+          quality_tips: qualityTipsFor(id),
+          ...(canPreview ? {} : { preview_reason: 'preview_unsupported' }),
+        }
+      })
+      return {
+        status: 'ok',
+        providers: list,
+        preview_text: PREVIEW_TEXT,
+      }
     },
 
     status(ownerId) {

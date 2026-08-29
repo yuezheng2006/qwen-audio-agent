@@ -2,8 +2,12 @@ import { maybeAwait } from '../conversation/memory/provider.mjs'
 import { isToolScope } from '../core/memory-scopes.mjs'
 import { importContentDocument } from '../voice/reader/ingest/import-content.mjs'
 import { createWereadClient } from '../voice/reader/weread/client.mjs'
-import { prepareAndSpeakWeread } from '../voice/reader/weread/speak.mjs'
+import {
+  prepareAndSpeakWeread,
+  speakWereadScript,
+} from '../voice/reader/weread/speak.mjs'
 import { resolveCascadeConfig } from '../core/config.mjs'
+import { verifySupportToken } from '../conversation/workspace.mjs'
 
 const MEMORY_WRITE_SCOPES = new Set(['profile', 'long_term', 'rules'])
 const REMINDER_KINDS = new Set(['reminder', 'scheduled_task'])
@@ -41,7 +45,10 @@ export function registerCapabilityRoutes(app, {
   importContent = importContentDocument,
   wereadClient = null,
   speakWeread = prepareAndSpeakWeread,
+  speakScript = speakWereadScript,
   resolveCascade = resolveCascadeConfig,
+  readerProgressStore = null,
+  supportInboundToken = process.env.SUPPORT_INBOUND_TOKEN || '',
 } = {}) {
   const weread = wereadClient || createWereadClient()
   app.get('/api/memory', async (req, res) => {
@@ -306,45 +313,59 @@ export function registerCapabilityRoutes(app, {
       } else if (action === 'seek') {
         progress = await readerSession.seek(Number(req.body?.offset) || 0)
       }
-      if (progress) readerProgressByOwner.set(ownerId, progress)
+      if (progress) {
+        readerProgressByOwner.set(ownerId, progress)
+        if (progress.contentId || progress.content_id) {
+          try {
+            readerProgressStore?.put(ownerId, {
+              contentId: progress.contentId || progress.content_id,
+              index: progress.index,
+              total: progress.total,
+              title: progress.title,
+            })
+          } catch {
+            // persistence must not block playback control
+          }
+        }
+      }
       res.json({ status: 'ok', action, progress })
     } catch (error) {
       res.status(503).json({ error: error.message })
     }
   })
 
-  app.get('/api/knowledge', (req, res) => {
+  app.get('/api/knowledge', async (req, res) => {
     try {
-      const health = knowledgeStore.health()
-      const sources = knowledgeStore.listSources({
+      const health = await maybeAwait(knowledgeStore.health())
+      const sources = await maybeAwait(knowledgeStore.listSources({
         kbId: req.query.kbId || undefined,
-      })
+      }))
       res.json({ health, sources, count: sources.length })
     } catch (error) {
       res.status(503).json({ error: error.message })
     }
   })
 
-  app.post('/api/knowledge/search', (req, res) => {
+  app.post('/api/knowledge/search', async (req, res) => {
     try {
       const query = String(req.body?.query || '').trim()
       if (!query) return res.status(400).json({ error: 'query is required' })
       const kbId = req.body?.kbId || undefined
-      knowledgeStore.ingest?.({ kbId })
-      const hits = knowledgeStore.search(query, {
+      await maybeAwait(knowledgeStore.ingest?.({ kbId }))
+      const hits = await maybeAwait(knowledgeStore.search(query, {
         kbId,
         limit: Math.min(20, Number(req.body?.limit) || 6),
-      })
+      }))
       res.json({ hits, count: hits.length, format: 'markdown' })
     } catch (error) {
       res.status(503).json({ error: error.message })
     }
   })
 
-  app.post('/api/knowledge/reindex', (req, res) => {
+  app.post('/api/knowledge/reindex', async (req, res) => {
     try {
       const kbId = req.body?.kbId || undefined
-      const built = knowledgeStore.ingest({ kbId })
+      const built = await maybeAwait(knowledgeStore.ingest({ kbId }))
       res.json({
         ok: true,
         format: 'markdown',
@@ -371,13 +392,82 @@ export function registerCapabilityRoutes(app, {
     }
   })
 
-  // Large-file ingest seam: MinerU parse → chapter md under CONTENT_DIR.
-  // Body uses an absolute local sourcePath (personal ops); no multipart dep.
+  app.get('/api/content/books', (req, res) => {
+    try {
+      const catalog = contentStore.listBooks?.() || { books: [], loose: [] }
+      res.json({
+        ...catalog,
+        reader: readerProgressByOwner.get(getOwnerId(req)) || { status: 'idle' },
+        cursors: readerProgressStore?.list(getOwnerId(req)) || [],
+      })
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  app.get('/api/content/progress', (req, res) => {
+    const ownerId = getOwnerId(req)
+    const contentId = String(req.query.contentId || '').trim()
+    if (contentId) {
+      return res.json({
+        cursor: readerProgressStore?.get(ownerId, contentId) || null,
+      })
+    }
+    res.json({ cursors: readerProgressStore?.list(ownerId) || [] })
+  })
+
+  app.put('/api/content/progress', (req, res) => {
+    try {
+      const cursor = readerProgressStore?.put(getOwnerId(req), {
+        contentId: req.body?.contentId || req.body?.content_id,
+        bookSlug: req.body?.bookSlug,
+        index: req.body?.index,
+        total: req.body?.total,
+        title: req.body?.title,
+      })
+      res.json({ ok: true, cursor })
+    } catch (error) {
+      res.status(400).json({ error: error.message })
+    }
+  })
+
+  app.post('/api/content/speak', async (req, res) => {
+    try {
+      let text = String(req.body?.text || req.body?.markdown || '').trim()
+      const contentId = String(req.body?.content_id || req.body?.contentId || '').trim()
+      let title = String(req.body?.title || '').trim()
+      if (!text && contentId) {
+        const doc = contentStore.get(contentId)
+        if (!doc?.text) return res.status(404).json({ error: 'content not found' })
+        text = doc.text
+        title = title || doc.title
+      }
+      if (!text) return res.status(400).json({ error: 'text or content_id is required' })
+      const audio = await speakScript({
+        text,
+        cascadeConfig: resolveCascade(process.env),
+      })
+      res.setHeader('Content-Type', 'audio/wav')
+      res.setHeader('X-Content-Title', encodeURIComponent(title || '朗读'))
+      res.send(audio.wav)
+    } catch (error) {
+      res.status(503).json({ error: error.message })
+    }
+  })
+
+  // Large-file ingest: local path, pasted text, URL, or base64 upload.
   app.post('/api/content/import', async (req, res) => {
     try {
       const sourcePath = String(req.body?.sourcePath || '').trim()
-      if (!sourcePath) {
-        return res.status(400).json({ error: 'sourcePath is required' })
+      const markdown = String(req.body?.markdown || '').trim()
+      const text = String(req.body?.text || '').trim()
+      const url = String(req.body?.url || '').trim()
+      const fileName = String(req.body?.fileName || req.body?.filename || '').trim()
+      const fileBase64 = String(req.body?.fileBase64 || req.body?.bytesBase64 || '').trim()
+      if (!sourcePath && !markdown && !text && !url && !fileBase64) {
+        return res.status(400).json({
+          error: '需要 sourcePath、markdown、text、url 或文件',
+        })
       }
       const contentDir = contentStore?.contentDir
       if (!contentDir) {
@@ -387,6 +477,11 @@ export function registerCapabilityRoutes(app, {
       const indexKnowledge = req.body?.indexKnowledge === true
       const result = await importContent({
         sourcePath,
+        markdown,
+        text,
+        url,
+        fileName,
+        fileBytes: fileBase64 ? Buffer.from(fileBase64, 'base64') : null,
         contentDir,
         knowledgeDir,
         title: String(req.body?.title || '').trim(),
@@ -396,12 +491,42 @@ export function registerCapabilityRoutes(app, {
         },
       })
       if (indexKnowledge && knowledgeStore?.ingest) {
-        knowledgeStore.ingest({ kbId: req.body?.kbId || undefined })
+        await maybeAwait(knowledgeStore.ingest({ kbId: req.body?.kbId || undefined }))
       }
       res.json(result)
     } catch (error) {
       res.status(503).json({ error: error.message })
     }
+  })
+
+  app.get('/api/support/session', (req, res) => {
+    const checked = verifySupportToken(req.query.token, supportInboundToken)
+    if (!checked.ok) return res.status(401).json({ error: checked.error })
+    res.json({
+      ok: true,
+      workspace: 'support',
+      visitorId: `support_${Date.now().toString(36)}`,
+    })
+  })
+
+  app.post('/api/support/escalate', (req, res) => {
+    const checked = verifySupportToken(
+      req.body?.token || req.query.token,
+      supportInboundToken,
+    )
+    if (!checked.ok) return res.status(401).json({ error: checked.error })
+    if (!taskManager?.create) {
+      return res.status(503).json({ error: 'taskManager is not configured' })
+    }
+    const objective = String(req.body?.objective || req.body?.summary || '').trim()
+    if (!objective) return res.status(400).json({ error: 'objective is required' })
+    const task = taskManager.create({
+      objective: `[客服升级] ${objective}`,
+      ownerId: getOwnerId(req),
+      sessionId: String(req.body?.sessionId || 'support'),
+      kind: 'work',
+    })
+    res.status(201).json({ ok: true, task })
   })
 
   app.get('/api/weread/status', (_req, res) => {

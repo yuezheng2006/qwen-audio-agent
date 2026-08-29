@@ -7,7 +7,7 @@ import { ToolCallHandler } from '../src/voice/tools/tool-call-handler.mjs'
 import {
   CONTENT_CONTROL_TOOL_NAME,
   KNOWLEDGE_SEARCH_TOOL_NAME,
-  USER_MEMORY_TOOL_NAME,
+  MEMORY_TOOL_NAME,
 } from '../src/voice/realtime-provider.mjs'
 import { resolveMemoryProvider } from '../src/conversation/memory/resolve.mjs'
 import { createLocalKnowledgeProvider } from '../src/knowledge/local-provider.mjs'
@@ -66,9 +66,10 @@ function createHandler(overrides = {}) {
     }),
     getTurnId: () => 'turn-1',
     getTurnGeneration: () => 1,
-    memoryStore,
+    memoryService: overrides.memoryService || memoryStore,
     knowledgeStore,
     readerSession,
+    getWorkspace: overrides.getWorkspace || (() => ''),
     onKnowledgeHits: hits => knowledgeHits.push(...hits),
     coordinator: {},
   })
@@ -89,6 +90,26 @@ test('knowledge_search tool returns markdown hits and notifies context', async (
   assert.ok(outputs[0].output.count >= 1)
   assert.equal(outputs[0].output.format, 'markdown')
   assert.ok(knowledgeHits.length >= 1)
+})
+
+test('knowledge_search in support workspace stays in support kb', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'qwaudio-support-search-'))
+  const knowledgeDir = join(root, 'knowledge')
+  mkdirSync(join(knowledgeDir, 'support'), { recursive: true })
+  writeFileSync(join(knowledgeDir, 'faq.md'), '# Default\n\n峰哥复刻音色。\n')
+  writeFileSync(join(knowledgeDir, 'support', 'faq.md'), '# Support\n\n退款必须在 48 小时内处理。\n')
+  const knowledgeStore = createLocalKnowledgeProvider({ knowledgeDir })
+  const { handler, outputs } = createHandler({
+    knowledgeStore,
+    getWorkspace: () => 'support',
+  })
+  await handler.handle({
+    call_id: 'call_ks_support',
+    name: KNOWLEDGE_SEARCH_TOOL_NAME,
+    arguments: JSON.stringify({ query: '退款', kb_id: 'default' }),
+  }, { turnId: 'turn-1', turnGeneration: 1 })
+  assert.equal(outputs[0].output.status, 'ok')
+  assert.ok(outputs[0].output.hits.some(hit => /退款/.test(hit.content)))
 })
 
 test('knowledge_search rejects empty query and reports not_found', async () => {
@@ -225,32 +246,39 @@ test('content_control can seek stop and start_explain', async () => {
   release()
 })
 
-test('user_memory remember/recall works through async-capable provider', async () => {
-  const { handler, outputs, memoryStore } = createHandler()
+test('memory tool appends and reads through memoryService', async () => {
+  const documents = []
+  const memoryService = {
+    list() { return documents },
+    apply(_ownerId, changes) {
+      for (const change of changes) {
+        if (change.append) {
+          documents.push({ scope: change.document, content: change.append })
+        }
+      }
+      return { changed: true, documents }
+    },
+  }
+  const { handler, outputs } = createHandler({ memoryService })
   await handler.handle({
     call_id: 'call_mem_1',
-    name: USER_MEMORY_TOOL_NAME,
+    name: MEMORY_TOOL_NAME,
     arguments: JSON.stringify({
-      action: 'remember',
-      scope: 'long_term',
+      action: 'append',
+      document: 'memory',
       content: '喜欢峰哥讲创业故事',
     }),
   }, { turnId: 'turn-1', turnGeneration: 1 })
-  assert.equal(outputs.at(-1).output.status, 'remembered')
+  assert.equal(outputs.at(-1).output.status, 'updated')
 
   await handler.handle({
     call_id: 'call_mem_2',
-    name: USER_MEMORY_TOOL_NAME,
+    name: MEMORY_TOOL_NAME,
     arguments: JSON.stringify({
-      action: 'recall',
-      scope: 'long_term',
-      query: '峰哥',
+      action: 'read',
+      document: 'memory',
     }),
   }, { turnId: 'turn-1', turnGeneration: 1 })
   assert.equal(outputs.at(-1).output.status, 'ok')
-  assert.ok(outputs.at(-1).output.count >= 1)
-
-  const listed = memoryStore.list('owner-a', { scope: 'long_term', query: '峰哥' })
-  const memories = listed?.then ? await listed : listed
-  assert.ok(memories.length >= 1)
+  assert.ok(outputs.at(-1).output.documents.some(item => /峰哥/.test(item.content)))
 })

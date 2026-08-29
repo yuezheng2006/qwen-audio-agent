@@ -221,6 +221,30 @@ test('mcp projection filters dangerous tools and truncates results', async () =>
   assert.ok(result.result.length <= 1200)
 })
 
+test('document-buddy MCP whitelist projects wiki tools and drops writes', async () => {
+  const { tools } = await buildMcpProjectedTools({
+    servers: [{
+      name: 'document_buddy',
+      enabled: true,
+      whitelist: ['query_project_wiki', 'get_cited_context', 'list_review_items'],
+    }],
+    connectServer: async () => ({
+      listTools: async () => ([
+        { name: 'query_project_wiki', description: 'cited wiki' },
+        { name: 'get_cited_context', description: 'citations' },
+        { name: 'ingest_text', description: 'write ingest' },
+        { name: 'resolve_conflict', description: 'write conflict' },
+      ]),
+      callTool: async () => 'ok',
+    }),
+  })
+  const names = tools.map(item => item.name)
+  assert.ok(names.includes('mcp__document_buddy__query_project_wiki'))
+  assert.ok(names.includes('mcp__document_buddy__get_cited_context'))
+  assert.ok(!names.includes('mcp__document_buddy__ingest_text'))
+  assert.ok(!names.includes('mcp__document_buddy__resolve_conflict'))
+})
+
 test('mcp client registry builds projected tools via fake transport', async () => {
   const { tools, health } = await buildMcpProjectedTools({
     servers: [{ name: 'fake', enabled: true }],

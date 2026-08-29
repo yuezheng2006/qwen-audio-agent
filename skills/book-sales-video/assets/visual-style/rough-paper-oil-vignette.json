@@ -1,0 +1,74 @@
+{
+  "status": "approved",
+  "styleId": "rough-paper-oil-vignette-v3",
+  "styleName": "粗纸油画画外留白",
+  "styleLocked": true,
+  "lockPolicy": "Keep this style unless the user explicitly asks to change or unlock it.",
+  "medium": "局部叙事油画绘制在粗糙暖色手工纸上，未上色纸面形成画外留白",
+  "palette": [
+    "warm raw-paper ivory",
+    "aged linen beige",
+    "yellow ochre",
+    "olive green",
+    "deep bottle green",
+    "muted terracotta",
+    "one low-saturation book-specific accent color"
+  ],
+  "materials": [
+    "highly visible coarse paper fibers and paper tooth",
+    "dry-brush oil paint",
+    "broken bristle marks",
+    "scumbled thin paint revealing raw paper",
+    "small restrained impasto and palette-knife accents"
+  ],
+  "characterRules": [
+    "keep age, hairstyle, clothing, and temperament continuous across recurring appearances",
+    "use specific natural actions instead of posed reading or generic smiling",
+    "render people as readable painterly forms rather than photorealistic skin"
+  ],
+  "compositionRules": [
+    "vertical 9:16 rough-paper sheet is the full canvas",
+    "reserve 20 to 30 percent genuinely unpainted raw paper only at the top, bottom, or both; never at the left or right edges",
+    "the painted narrative scene occupies at least 70 percent of the sheet, preferably 70 to 80 percent, and reaches both left and right canvas edges",
+    "end the painted scene with dry-brush fade, broken edge, scumbled edge, or open contour only along its upper and lower edges",
+    "vary top and bottom blank-paper proportion, internal staging, shot scale, and camera view without narrowing the scene horizontally",
+    "place bilingual subtitles on a consistent unpainted bottom-paper band, clear of scene objects and strong pigment",
+    "do not count walls, sky, fog, floors, or pale in-scene backgrounds as blank paper"
+  ],
+  "avoid": [
+    "full-height scene with an empty wall used as negative space",
+    "unpainted raw paper at left or right edges, or a scene that does not reach both side edges",
+    "photograph with yellow or oil-paint filter",
+    "photorealistic faces and digital camera sharpness",
+    "hard rectangular photo border",
+    "torn-paper collage or cutout figures",
+    "smooth textureless white background",
+    "uniform noise overlay instead of real paper tooth and brush interaction",
+    "heavy brown sepia, dirty damaged paper, glossy 3D, purple-blue gradients, and AI glow",
+    "generated book titles, captions, logos, or watermarks"
+  ],
+  "shotPlanFields": {
+    "paperBlankRatio": "0.20-0.30; prefer 0.20-0.25",
+    "paperBlankPlacement": ["top", "bottom", "top-and-bottom"],
+    "paintedScenePlacement": ["full-width"],
+    "paintedEdgeTreatment": ["dry-brush-fade", "broken-edge", "scumbled-edge", "open-contour"]
+  },
+  "approvedStyleAnchor": "assets/visual-style/approved-rough-paper-oil-v3.png",
+  "sourceReferenceAsset": "assets/visual-style/reference-warm-paper.png",
+  "lockedAttributes": [
+    "coarse warm-ivory handmade paper",
+    "expressive figurative oil paint",
+    "visible dry-brush, scumbling, scraped pigment, and restrained impasto",
+    "20 to 30 percent genuinely unpainted paper only at the top, bottom, or both",
+    "at least 70 percent, preferably 70 to 80 percent, visually dominant painted scene reaching both side edges",
+    "warm ivory, ochre, aged linen, olive green, deep bottle green, terracotta, and charcoal base palette",
+    "open irregular painted edges rather than rectangular frames"
+  ],
+  "allowedVariations": [
+    "story content and setting",
+    "character action and props",
+    "shot scale and camera view",
+    "painted-scene position and exact edge shape",
+    "one low-saturation book-specific accent color"
+  ]
+}

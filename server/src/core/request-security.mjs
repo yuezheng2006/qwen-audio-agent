@@ -42,33 +42,38 @@ export function isAllowedOrigin(
   req,
   { allowedOrigins = config.allowedOrigins } = {},
 ) {
-  const requestHost = parsedHost(req.headers.host)
-  if (!requestHost) return false
-  const origin = normalizedOrigin(req.headers.origin)
-  const configured = trustedOrigins(allowedOrigins)
-  const trustedHost = configured.some(value => (
-    new URL(value).host === requestHost.host
-  ))
+  try {
+    const requestHost = parsedHost(req.headers.host)
+    if (!requestHost) return false
+    const origin = normalizedOrigin(req.headers.origin)
+    const configured = trustedOrigins(allowedOrigins)
+    const trustedHost = configured.some(value => (
+      new URL(value).host === requestHost.host
+    ))
 
-  // CLI and other non-browser clients do not send Origin. They are accepted
-  // only through a loopback address or an explicitly trusted reverse proxy.
-  if (!origin) {
-    return LOOPBACK_HOSTS.has(requestHost.hostname) || trustedHost
+    // CLI and other non-browser clients do not send Origin. They are accepted
+    // only through a loopback address or an explicitly trusted reverse proxy.
+    // Browsers may also send the literal "null" origin.
+    if (!origin) {
+      return LOOPBACK_HOSTS.has(requestHost.hostname) || trustedHost
+    }
+
+    const originUrl = new URL(origin)
+    if (configured.includes(origin)) {
+      return originUrl.host === requestHost.host
+    }
+
+    // Comparing arbitrary Origin and Host values is vulnerable to DNS rebinding.
+    // The implicit same-origin path is therefore limited to literal loopback
+    // hosts. Public hostnames must be explicitly allowlisted.
+    return (
+      LOOPBACK_HOSTS.has(requestHost.hostname)
+      && LOOPBACK_HOSTS.has(originUrl.hostname)
+      && originUrl.host === requestHost.host
+    )
+  } catch {
+    return false
   }
-
-  const originUrl = new URL(origin)
-  if (configured.includes(origin)) {
-    return originUrl.host === requestHost.host
-  }
-
-  // Comparing arbitrary Origin and Host values is vulnerable to DNS rebinding.
-  // The implicit same-origin path is therefore limited to literal loopback
-  // hosts. Public hostnames must be explicitly allowlisted.
-  return (
-    LOOPBACK_HOSTS.has(requestHost.hostname)
-    && LOOPBACK_HOSTS.has(originUrl.hostname)
-    && originUrl.host === requestHost.host
-  )
 }
 
 export function enforceSameOrigin(req, res, next) {

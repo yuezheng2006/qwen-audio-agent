@@ -59,6 +59,12 @@ test('knowledge resolve supports local and none', () => {
   const none = resolveKnowledgeProvider({}, { KNOWLEDGE_PROVIDER: 'none' })
   assert.equal(none.kind, 'none')
   assert.deepEqual(none.search('anything'), [])
+
+  const weknora = resolveKnowledgeProvider({
+    knowledgeDir: join(root, 'knowledge'),
+    weknora: { baseUrl: 'http://127.0.0.1:8080' },
+  }, { KNOWLEDGE_PROVIDER: 'weknora' })
+  assert.equal(weknora.kind, 'weknora')
 })
 
 test('cascade config exposes voicebox base url and provider', () => {
