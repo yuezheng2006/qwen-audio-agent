@@ -209,6 +209,7 @@ export default function App() {
   const [spriteAnimationCues, setSpriteAnimationCues] = useState([])
   const [spriteOrbFailed, setSpriteOrbFailed] = useState(false)
   const [desktopLifecycle, setDesktopLifecycle] = useState('active')
+  const [showVoiceStudio, setShowVoiceStudio] = useState(false)
   const [desktopSurfaceMode, setDesktopSurfaceMode] = useState(
     initialDesktopSurfaceMode,
   )
