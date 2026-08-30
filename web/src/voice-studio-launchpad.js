@@ -2,15 +2,15 @@
 export const VOICE_STUDIO_TILES = [
   {
     id: 'gallery',
-    title: '声音库',
-    blurb: '试听 · 下载 · 选用',
+    title: '使用一个声音',
+    blurb: '试听声音，并选它来和助手聊天',
     status: 'live',
     view: 'gallery',
   },
   {
     id: 'clone',
-    title: '克隆',
-    blurb: '语音克隆或导入 ID',
+    title: '复制我的声音',
+    blurb: '录一小段声音，生成属于你的音色',
     status: 'live',
     view: 'clone',
   },
@@ -28,8 +28,8 @@ export const VOICE_STUDIO_TILES = [
   },
   {
     id: 'audiobook',
-    title: '有声书',
-    blurb: '书架 · 导入 · 朗读',
+    title: '朗读一本书',
+    blurb: '导入书籍，用选定的声音朗读',
     status: 'live',
     jump: 'reading',
   },
@@ -47,8 +47,8 @@ export const VOICE_STUDIO_TILES = [
   },
   {
     id: 'engines',
-    title: '引擎设置',
-    blurb: 'cascade / S2S',
+    title: '高级设置',
+    blurb: '调整语音前台和连接方式',
     status: 'jump',
     jump: 'mode',
   },

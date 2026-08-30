@@ -412,7 +412,7 @@ function ClonePage({
 }
 
 function statusLabel(tile) {
-  if (tile.status === 'live') return '可用'
+  if (tile.status === 'live') return '打开'
   if (tile.status === 'jump') return '设置'
   return '稍后'
 }
@@ -482,9 +482,10 @@ export default function VoiceStudioPanel({
 
         {view === 'launchpad' && (
           <div className="voice-studio-body">
-            <p className="voice-studio-lead">选择能力进入工作区</p>
+            <p className="voice-studio-lead">你想用声音做什么？</p>
+            <p className="voice-studio-sublead">从一个简单任务开始，随时可以返回继续聊天。</p>
             <div className="voice-studio-launchpad" role="list">
-              {VOICE_STUDIO_TILES.map(tile => (
+              {VOICE_STUDIO_TILES.filter(tile => tile.status !== 'soon').map(tile => (
                 <button
                   key={tile.id}
                   type="button"

@@ -1694,6 +1694,74 @@ article.user .message-body .inline-code { background: #5e44c9; color: #f0eaff; }
   word-break: break-word;
 }
 .settings-panel-wide { width: min(460px, 100vw); }
+.voice-studio-panel { padding: 24px 22px 30px; }
+.voice-studio-header-main { min-width: 0; }
+.voice-studio-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #8d80c9;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.voice-studio-header .voice-text-btn {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1px solid #ffffff16;
+  border-radius: 9px;
+  color: #bdb6cb;
+  background: #ffffff06;
+}
+.voice-studio-header .voice-text-btn:hover { color: #f4f0ff; background: #ffffff0c; }
+.voice-studio-lead {
+  margin: 8px 0 4px !important;
+  color: #f1edf8 !important;
+  font-size: 17px !important;
+  font-weight: 600;
+}
+.voice-studio-sublead { margin-bottom: 18px !important; color: #8d879a; }
+.voice-studio-launchpad {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.voice-studio-tile {
+  min-width: 0;
+  min-height: 108px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #ffffff14;
+  border-radius: 14px;
+  text-align: left;
+  color: #ece8f5;
+  background: #ffffff06;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.voice-studio-tile:hover,
+.voice-studio-tile:focus-visible {
+  border-color: #927cf477;
+  background: #785cf414;
+  outline: 0;
+  transform: translateY(-1px);
+}
+.voice-studio-tile:active { transform: translateY(0); }
+.voice-studio-tile-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.voice-studio-tile-title { font-size: 14px; font-weight: 600; line-height: 1.35; }
+.voice-studio-tile-status {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: #bcaeff;
+  background: #785cf422;
+  font-size: 10px;
+}
+.voice-studio-tile-blurb { color: #938da0; font-size: 11px; line-height: 1.45; }
+.voice-studio-body { min-width: 0; }
 .settings-panel section:first-of-type {
   margin-top: 12px;
   padding-top: 0;
@@ -1879,6 +1947,7 @@ header select.frontend-provider option {
 .voice-recorded-clone-form .voice-clone-submit { flex: 0 0 auto; }
 
 @media (max-width: 600px) {
+  .voice-studio-launchpad { grid-template-columns: 1fr; }
   .voice-recorder-actions { align-items: stretch; flex-direction: column; }
   .voice-recorder-actions audio { width: 100%; }
   .voice-clip-actions { align-items: stretch; flex-direction: column; }
