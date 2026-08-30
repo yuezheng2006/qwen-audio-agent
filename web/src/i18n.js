@@ -74,6 +74,8 @@ const translations = {
   '画面观察': 'visual observation',
   '原生视频': 'native video',
   '新会话': 'New session',
+  '工作台': 'Workbench',
+  '打开工作台': 'Open workbench',
   '资料库': 'Library',
   '把本机的手册、规章、教材交给助手': 'Hand local manuals, policies and textbooks to the assistant',
   '粘贴本机文件路径，例如 /Users/me/手册.md': 'Paste a local file path, e.g. /Users/me/manual.md',

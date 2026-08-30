@@ -200,6 +200,7 @@ export default function App() {
   const [agentTasks, setAgentTasks] = useState([])
   const [desktopTasksCollapsed, setDesktopTasksCollapsed] = useState(false)
   const [showDomainLibrary, setShowDomainLibrary] = useState(false)
+  const [showWorkbenchMenu, setShowWorkbenchMenu] = useState(false)
   const [desktopTaskLayout, setDesktopTaskLayout] = useState({
     placement: 'below',
     orbOffsetX: 0,
@@ -1387,25 +1388,45 @@ export default function App() {
           {t('前台：{label}', { label: item.label })}
         </option>)}
       </select>}
-      {/* 资料库入口只在 web 模式给：桌面悬浮球的 header 已经紧到把「新会话」
-          压成一个「＋」，再塞一个文字按钮会挤掉语音按钮 */}
+      {/* Keep secondary tools behind one stable entry so the top bar stays calm. */}
       {!desktopOrbMode && (
-        <button
-          className={`ghost${showVoiceStudio ? ' active' : ''}`}
-          onClick={() => setShowVoiceStudio(true)}
-          title={t('录音、裁剪和管理个人音色')}
-        >
-          {t('语音工作室')}
-        </button>
-      )}
-      {!desktopOrbMode && (
-        <button
-          className={`ghost${showDomainLibrary ? ' active' : ''}`}
-          onClick={() => setShowDomainLibrary(value => !value)}
-          title={t('把本机的手册、规章、教材交给助手')}
-        >
-          {t('资料库')}
-        </button>
+        <div className="workbench-menu-wrap">
+          <button
+            className={`ghost workbench-trigger${showVoiceStudio || showDomainLibrary ? ' active' : ''}`}
+            onClick={() => setShowWorkbenchMenu(value => !value)}
+            aria-expanded={showWorkbenchMenu}
+            aria-haspopup="menu"
+            title={t('打开工作台')}
+          >
+            <span>{t('工作台')}</span><span className="menu-chevron" aria-hidden="true">⌄</span>
+          </button>
+          {showWorkbenchMenu && <div className="workbench-menu" role="menu">
+            <button
+              type="button"
+              className={showVoiceStudio ? 'active' : ''}
+              onClick={() => {
+                setShowVoiceStudio(true)
+                setShowDomainLibrary(false)
+                setShowWorkbenchMenu(false)
+              }}
+              role="menuitem"
+            >
+              <span>{t('语音工作室')}</span><small>{t('录音、裁剪和管理个人音色')}</small>
+            </button>
+            <button
+              type="button"
+              className={showDomainLibrary ? 'active' : ''}
+              onClick={() => {
+                setShowDomainLibrary(value => !value)
+                setShowVoiceStudio(false)
+                setShowWorkbenchMenu(false)
+              }}
+              role="menuitem"
+            >
+              <span>{t('资料库')}</span><small>{t('把本机的手册、规章、教材交给助手')}</small>
+            </button>
+          </div>}
+        </div>
       )}
       <button
         className={`ghost session-action${desktopOrbMode ? ' desktop-new-session' : ''}`}
