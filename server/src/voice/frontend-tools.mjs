@@ -437,6 +437,12 @@ export const frontendToolRegistry = new FrontendToolRegistry([
 
 export const TOOLS = frontendToolRegistry.definitions()
 
+// Compatibility name kept for capability consumers that need the static
+// baseline without dynamically configured frontend tools.
+export function getBuiltinTools() {
+  return TOOLS
+}
+
 function dynamicFrontendTools(agentContext = {}) {
   const configured = agentContext?.frontend?.tools
   if (!Array.isArray(configured)) return []

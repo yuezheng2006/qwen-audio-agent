@@ -14,6 +14,7 @@ import {
 import {
   resolveRealtimeFrontendConfiguration,
 } from '../../../shared/realtime-provider-catalog.mjs'
+import { resolveCascadeTtsPluginConfig } from '../../../shared/cascade-tts-plugins.mjs'
 import {
   loadFrontendProfile,
   resolveFrontendProfileConfiguration,
@@ -23,6 +24,10 @@ const here = dirname(fileURLToPath(import.meta.url))
 const sourceRoot = resolve(here, '../../..')
 const root = process.env.QWEN_AUDIO_AGENT_RUNTIME_ROOT || sourceRoot
 const runtimeEnvironment = loadRuntimeEnvironment({ root })
+const cascadeTtsConfig = resolveCascadeTtsPluginConfig(
+  process.env,
+  String(process.env.CASCADE_TTS_API_KEY || process.env.DASHSCOPE_API_KEY || '').trim(),
+)
 
 export function numberSetting(value, fallback, {
   min = Number.NEGATIVE_INFINITY,
@@ -337,6 +342,30 @@ export const config = {
   speechToSpeechAuthToken: realtimeFrontend.speechToSpeechAuthToken,
   audioModel: realtimeFrontend.dashscopeModel,
   audioVoice: realtimeFrontend.dashscopeVoice,
+  cascade: {
+    host: process.env.CASCADE_HOST || '127.0.0.1',
+    port: numberSetting(process.env.CASCADE_PORT, 0, { min: 0, max: 65535 }),
+    dashscopeWsUrl: realtimeFrontend.dashscopeRealtimeUrl,
+    vad: {
+      energyThreshold: numberSetting(process.env.CASCADE_VAD_ENERGY_THRESHOLD, 500, { min: 0 }),
+      silenceMs: numberSetting(process.env.CASCADE_VAD_SILENCE_MS, 700, { min: 100 }),
+    },
+    stt: {
+      provider: process.env.CASCADE_STT_PROVIDER || 'dashscope',
+      model: process.env.CASCADE_STT_MODEL || 'qwen-audio-3.0-asr-flash-streaming',
+      apiKey: process.env.CASCADE_STT_API_KEY || realtimeFrontend.dashscopeApiKey,
+      url: process.env.CASCADE_STT_URL || '',
+    },
+    llm: {
+      model: process.env.CASCADE_LLM_MODEL || 'qwen-flash',
+      apiKey: process.env.CASCADE_LLM_API_KEY || realtimeFrontend.dashscopeApiKey,
+      baseUrl: (process.env.CASCADE_LLM_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1').replace(/\/+$/, ''),
+    },
+    tts: cascadeTtsConfig,
+  },
+  voiceStudioEnabled: String(process.env.QWEN_AUDIO_VOICE_STUDIO || 'on').toLowerCase() !== 'off',
+  voiceProfileDir: resolve(runtimeEnvironment.configDirectory, 'voice-profiles'),
+  voicePresetDir: resolve(root, 'config/voice-presets'),
   webSearchProvider: webSearch.provider,
   webSearchMcpUrl: webSearch.mcpUrl,
   webSearchMcpToken: webSearch.mcpToken,

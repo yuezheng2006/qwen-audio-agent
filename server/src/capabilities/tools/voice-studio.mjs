@@ -46,6 +46,7 @@ const VOICE_INPUT_PROPERTIES = {
   preset_id: { type: 'string', description: '演示音色 id。' },
   sample_url: { type: 'string', description: '可访问的音频样本 URL。' },
   sample_path: { type: 'string', description: '本机音频样本路径。' },
+  sample_data_url: { type: 'string', description: '浏览器录音生成的 base64 音频数据。' },
   target_model: { type: 'string', description: '供应商目标 TTS 模型。' },
 }
 

@@ -58,7 +58,17 @@ export function createSampleResolver({
   }
 
   return {
-    resolve({ preset_id, sample_url, sample_path } = {}, capabilities = {}) {
+    resolve({ preset_id, sample_url, sample_path, sample_data_url } = {}, capabilities = {}) {
+      if (sample_data_url) {
+        const value = String(sample_data_url).trim()
+        if (!/^data:audio\/(wav|webm|mp4|mpeg|ogg);base64,[A-Za-z0-9+/=]+$/i.test(value)) {
+          throw resolverError('sample_invalid', 'sample_data_url 必须是 base64 音频数据。')
+        }
+        if (value.length > 7 * 1024 * 1024) {
+          throw resolverError('sample_too_large', '录音样本不能超过 5 MB。')
+        }
+        return { kind: 'url', url: value }
+      }
       if (sample_url) {
         let url
         try {

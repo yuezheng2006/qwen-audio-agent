@@ -193,6 +193,41 @@ export function registerVoiceRoutes(app, {
     }
   })
 
+  app.post('/api/voice/clone', async (req, res) => {
+    if (!voiceStudioService) return unavailable(res)
+    const sample = String(req.body?.sample_data_url || '').trim()
+    if (!sample) {
+      return res.status(400).json({
+        error: '请先录音并应用裁剪。',
+        error_code: 'sample_missing',
+      })
+    }
+    if (sample.length > 7 * 1024 * 1024) {
+      return res.status(413).json({
+        error: '录音样本不能超过 5 MB。',
+        error_code: 'sample_too_large',
+      })
+    }
+    try {
+      const result = await voiceStudioService.clone(req.identity?.ownerId, {
+        provider: req.body?.provider,
+        label: req.body?.label,
+        target_model: req.body?.target_model,
+        sample_data_url: sample,
+      })
+      if (result.status !== 'ok') {
+        return res.status(result.error_code === 'provider_unconfigured' ? 409 : 400).json({
+          error: result.user_message || '音色克隆失败。',
+          error_code: result.error_code,
+          retryable: result.retryable,
+        })
+      }
+      return res.json(result)
+    } catch (error) {
+      return res.status(500).json({ error: error.message || '音色克隆失败。' })
+    }
+  })
+
   // Warm / rebuild preview cache (write-through). Gallery playback uses GET.
   app.post('/api/voice/preview', async (req, res) => {
     if (!voiceStudioService) return unavailable(res)

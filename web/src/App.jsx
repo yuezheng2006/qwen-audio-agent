@@ -18,6 +18,7 @@ import MultimodalComposer from './MultimodalComposer.jsx'
 import DesktopFluidOrb from './DesktopFluidOrb.jsx'
 import DesktopSpriteOrb from './DesktopSpriteOrb.jsx'
 import DomainLibraryPanel from './DomainLibraryPanel.jsx'
+import VoiceStudioPanel from './VoiceStudioPanel.jsx'
 import { desktopOrbClassName, resolveOrbVisualState } from './orb-presentation.js'
 import {
   isBuiltinOrbSkin,
@@ -195,6 +196,7 @@ export default function App() {
     status: 'starting',
     code: null,
   })
+  const [runtimeSnapshot, setRuntimeSnapshot] = useState(null)
   const [agentTasks, setAgentTasks] = useState([])
   const [desktopTasksCollapsed, setDesktopTasksCollapsed] = useState(false)
   const [showDomainLibrary, setShowDomainLibrary] = useState(false)
@@ -350,6 +352,7 @@ export default function App() {
       .then(({ response, payload }) => {
         if (cancelled) return
         const gatewayReady = response.ok && payload.ok !== false
+        setRuntimeSnapshot(payload)
         const backendPayload = payload.backend || {}
         const backendEnabled = backendPayload.enabled !== false && Boolean(
           backendPayload.kind || backendPayload.protocol,
@@ -1387,6 +1390,15 @@ export default function App() {
           压成一个「＋」，再塞一个文字按钮会挤掉语音按钮 */}
       {!desktopOrbMode && (
         <button
+          className={`ghost${showVoiceStudio ? ' active' : ''}`}
+          onClick={() => setShowVoiceStudio(true)}
+          title={t('录音、裁剪和管理个人音色')}
+        >
+          {t('语音工作室')}
+        </button>
+      )}
+      {!desktopOrbMode && (
+        <button
           className={`ghost${showDomainLibrary ? ' active' : ''}`}
           onClick={() => setShowDomainLibrary(value => !value)}
           title={t('把本机的手册、规章、教材交给助手')}
@@ -1442,6 +1454,13 @@ export default function App() {
         onClose={() => setShowDomainLibrary(false)}
         getTask={voice.getTask}
       />}
+      <VoiceStudioPanel
+        open={showVoiceStudio}
+        onClose={() => setShowVoiceStudio(false)}
+        runtime={runtimeSnapshot}
+        onRuntimeChange={setRuntimeSnapshot}
+        onModeSwitching={() => {}}
+      />
       <div className="hero">
         <button
           className={`orb ${orbVisualState}`}

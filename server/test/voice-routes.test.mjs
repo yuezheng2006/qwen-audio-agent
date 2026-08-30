@@ -155,6 +155,34 @@ test('GET /api/voice/profiles lists ready profiles and active voice', async () =
   })
 })
 
+test('POST /api/voice/clone accepts a browser recording data URL', async () => {
+  let received
+  await withServer(app => {
+    registerVoiceRoutes(app, {
+      voiceStudioService: mockService({
+        async clone(ownerId, input) {
+          received = { ownerId, input }
+          return { status: 'ok', profile: { id: 'recorded-1', label: input.label } }
+        },
+      }),
+    })
+  }, async base => {
+    const res = await fetch(`${base}/api/voice/clone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: 'dashscope',
+        label: '我的声音',
+        sample_data_url: 'data:audio/wav;base64,Uk lG'.replaceAll(' ', ''),
+      }),
+    })
+    assert.equal(res.status, 200)
+    assert.equal((await res.json()).profile.id, 'recorded-1')
+    assert.equal(received.ownerId, 'owner-a')
+    assert.equal(received.input.sample_data_url, 'data:audio/wav;base64,Uk lG'.replaceAll(' ', ''))
+  })
+})
+
 test('preview Content-Disposition names the wav after the friendly voice', () => {
   assert.equal(
     previewContentDisposition({ label: '刘震云·北大·降噪' }, { download: true }),

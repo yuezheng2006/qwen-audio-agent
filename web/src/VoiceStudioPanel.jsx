@@ -1,9 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import VoiceGallery from './VoiceGallery.jsx'
 import {
   VOICE_STUDIO_TILES,
   resolveVoiceStudioView,
 } from './voice-studio-launchpad.js'
+import {
+  blobToDataUrl,
+  clampClipRange,
+  encodeWav,
+  formatRecordingTime,
+  selectRecorderMimeType,
+} from './voice-recorder.js'
 
 const TTS_PROVIDERS = ['dashscope', 'voicebox', 'fish', 'listenhub', 'minimax']
 
@@ -37,6 +44,178 @@ function qualityTipsFrom(voiceCapabilities) {
   return Array.isArray(tips) ? tips : []
 }
 
+function RecordingClipEditor({ onSampleReady }) {
+  const [recording, setRecording] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [clip, setClip] = useState({ start: 0, end: 0 })
+  const [rawUrl, setRawUrl] = useState('')
+  const [clipUrl, setClipUrl] = useState('')
+  const [rawBlob, setRawBlob] = useState(null)
+  const [sampleBlob, setSampleBlob] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const recorderRef = useRef(null)
+  const streamRef = useRef(null)
+  const chunksRef = useRef([])
+  const timerRef = useRef(null)
+
+  useEffect(() => () => {
+    clearInterval(timerRef.current)
+    streamRef.current?.getTracks().forEach(track => track.stop())
+    if (rawUrl) URL.revokeObjectURL(rawUrl)
+    if (clipUrl) URL.revokeObjectURL(clipUrl)
+  }, [rawUrl, clipUrl])
+
+  const stopTracks = () => {
+    streamRef.current?.getTracks().forEach(track => track.stop())
+    streamRef.current = null
+  }
+
+  const startRecording = async () => {
+    setError('')
+    if (!globalThis.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
+      setError('当前浏览器不支持录音，请使用最新版 Chrome、Safari 或 Edge。')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mimeType = selectRecorderMimeType()
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+      chunksRef.current = []
+      streamRef.current = stream
+      recorderRef.current = recorder
+      recorder.ondataavailable = event => {
+        if (event.data.size) chunksRef.current.push(event.data)
+      }
+      recorder.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+        const url = URL.createObjectURL(blob)
+        setRawUrl(current => {
+          if (current) URL.revokeObjectURL(current)
+          return url
+        })
+        const audio = new Audio(url)
+        audio.onloadedmetadata = () => {
+          const nextDuration = Number.isFinite(audio.duration) ? audio.duration : elapsed
+          setDuration(nextDuration)
+          setClip({ start: 0, end: nextDuration })
+        }
+        setRawBlob(blob)
+        setSampleBlob(blob)
+        setClipUrl('')
+        setRecording(false)
+        stopTracks()
+      }
+      recorder.start(250)
+      setElapsed(0)
+      setRecording(true)
+      clearInterval(timerRef.current)
+      timerRef.current = setInterval(() => setElapsed(value => value + 1), 1000)
+    } catch (err) {
+      stopTracks()
+      setError(err?.name === 'NotAllowedError'
+        ? '录音权限被拒绝，请在浏览器设置中允许麦克风。'
+        : '无法开始录音，请检查麦克风设备。')
+    }
+  }
+
+  const stopRecording = () => {
+    clearInterval(timerRef.current)
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+  }
+
+  const setClipValue = (key, value) => {
+    const next = clampClipRange(
+      key === 'start' ? value : clip.start,
+      key === 'end' ? value : clip.end,
+      duration,
+    )
+    setClip(next)
+  }
+
+  const previewClip = async () => {
+    if (!rawBlob || !duration) return
+    setBusy(true)
+    setError('')
+    try {
+      const AudioContextCtor = globalThis.AudioContext || globalThis.webkitAudioContext
+      if (!AudioContextCtor) throw new Error('audio_context_unavailable')
+      const context = new AudioContextCtor()
+      const buffer = await context.decodeAudioData(await rawBlob.arrayBuffer())
+      const wav = encodeWav(buffer, clip.start, clip.end)
+      await context.close()
+      const url = URL.createObjectURL(wav)
+      setClipUrl(current => {
+        if (current) URL.revokeObjectURL(current)
+        return url
+      })
+      setSampleBlob(wav)
+      onSampleReady?.(wav, clip)
+    } catch {
+      setError('录音格式无法解析，请重新录制。')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const downloadClip = () => {
+    if (!sampleBlob) return
+    const link = document.createElement('a')
+    link.href = clipUrl || URL.createObjectURL(sampleBlob)
+    link.download = 'qwen-audio-voice-sample.wav'
+    link.click()
+    if (!clipUrl) URL.revokeObjectURL(link.href)
+  }
+
+  return (
+    <section className="voice-recorder" aria-label="录制声音样本">
+      <div className="voice-recorder-heading">
+        <div>
+          <strong>录一段你的声音</strong>
+          <p>建议 5–15 秒，安静环境下自然说话。</p>
+        </div>
+        <span className={recording ? 'recording-indicator live' : 'recording-indicator'}>
+          {recording ? `录音中 ${formatRecordingTime(elapsed)}` : duration ? `样本 ${formatRecordingTime(duration)}` : '未录音'}
+        </span>
+      </div>
+      <div className="voice-recorder-actions">
+        <button
+          type="button"
+          className={recording ? 'voice-danger-btn' : 'voice-primary-btn'}
+          onClick={recording ? stopRecording : startRecording}
+        >
+          <span className="record-dot" aria-hidden="true" />
+          {recording ? '停止录音' : '开始录音'}
+        </button>
+        {rawUrl && <audio controls src={clipUrl || rawUrl} />}
+      </div>
+      {duration > 0 && !recording && (
+        <div className="voice-clip-editor">
+          <div className="voice-clip-track" aria-hidden="true">
+            <span style={{ left: `${(clip.start / duration) * 100}%`, right: `${100 - (clip.end / duration) * 100}%` }} />
+          </div>
+          <label>
+            起点 <input type="range" min="0" max={duration} step="0.01" value={clip.start} onChange={event => setClipValue('start', event.target.value)} />
+            <output>{clip.start.toFixed(1)}s</output>
+          </label>
+          <label>
+            终点 <input type="range" min="0" max={duration} step="0.01" value={clip.end} onChange={event => setClipValue('end', event.target.value)} />
+            <output>{clip.end.toFixed(1)}s</output>
+          </label>
+          <div className="voice-clip-actions">
+            <button type="button" className="voice-secondary-btn" disabled={busy || clip.end <= clip.start} onClick={previewClip}>
+              {busy ? '处理中…' : '应用裁剪并试听'}
+            </button>
+            <button type="button" className="voice-text-btn" disabled={!sampleBlob} onClick={downloadClip}>下载 WAV</button>
+          </div>
+        </div>
+      )}
+      {error && <p className="settings-error">{error}</p>}
+    </section>
+  )
+}
+
 function ClonePage({
   open,
   runtime,
@@ -51,6 +230,9 @@ function ClonePage({
   const [voiceCapabilities, setVoiceCapabilities] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [sampleBlob, setSampleBlob] = useState(null)
+  const [sampleReady, setSampleReady] = useState(false)
+  const [label, setLabel] = useState('我的声音')
 
   const refreshCaps = useCallback(async () => {
     const res = await fetch('api/voice/capabilities')
@@ -112,6 +294,26 @@ function ClonePage({
 
   const tips = qualityTipsFrom(voiceCapabilities)
 
+  const cloneRecordedVoice = async () => {
+    if (!sampleBlob) return
+    await run(async () => {
+      const sample = await blobToDataUrl(sampleBlob)
+      const result = await readJson(await fetch('api/voice/clone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: ttsDraft.provider,
+          label,
+          target_model: ttsDraft.model,
+          sample_data_url: sample,
+        }),
+      }))
+      setSampleReady(false)
+      if (result.profile) setError(`音色已创建：${result.profile.label || label}，请到声音库确认并启用。`)
+      await refreshCaps()
+    })
+  }
+
   return (
     <div className="voice-studio-body voice-clone-body">
       {error && <p className="settings-error">{error}</p>}
@@ -131,6 +333,27 @@ function ClonePage({
           </ul>
         </details>
       )}
+
+      <RecordingClipEditor onSampleReady={(blob) => {
+        setSampleBlob(blob)
+        setSampleReady(true)
+      }} />
+
+      <div className="voice-clone-form voice-recorded-clone-form">
+        <p className="voice-clone-form-label">用裁剪后的录音提取音色</p>
+        <label className="voice-field">
+          <span>名称</span>
+          <input value={label} disabled={busy} onChange={event => setLabel(event.target.value)} />
+        </label>
+        <button
+          className="voice-primary-btn voice-clone-submit"
+          type="button"
+          disabled={busy || !sampleReady || !sampleBlob}
+          onClick={cloneRecordedVoice}
+        >
+          {busy ? '提取中…' : '开始提取音色'}
+        </button>
+      </div>
 
       <div className="voice-clone-form">
         <p className="voice-clone-form-label">或导入已有 Voice ID</p>

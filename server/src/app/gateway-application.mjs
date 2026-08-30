@@ -83,6 +83,13 @@ import {
   ClientEventDefinitionRegistry,
   GatewayEventRouter,
 } from '../client/client-event-router.mjs'
+import { registerVoiceRoutes } from './voice-routes.mjs'
+import { createVoiceProfileStore } from '../voice/studio/profile-store.mjs'
+import { loadPresetCatalog } from '../voice/studio/preset-catalog.mjs'
+import { createVoiceCloneProviders } from '../voice/studio/providers/registry.mjs'
+import { createVoiceStudioService } from '../voice/studio/service.mjs'
+import { persistCascadeTts } from '../../../scripts/lib/runtime-config-file.mjs'
+import { restartGateway } from './restart-gateway.mjs'
 
 export function createGatewayApplication({
   config = defaultConfig,
@@ -413,6 +420,33 @@ const knowledgeProviderRuntime = knowledgeProvider
 const frontendKnowledgeRuntime = frontendKnowledge || (knowledgeProviderRuntime
   ? new FrontendKnowledgeRuntime({ provider: knowledgeProviderRuntime })
   : null)
+const voiceStudioService = config.voiceStudioEnabled === false
+  ? null
+  : createVoiceStudioService({
+      store: createVoiceProfileStore({
+        dir: config.voiceProfileDir
+          || resolve(config.configDirectory || config.dataDirectory || process.cwd(), 'voice-profiles'),
+      }),
+      catalog: loadPresetCatalog(
+        config.voicePresetDir || resolve(config.root || process.cwd(), 'config/voice-presets'),
+      ),
+      presetsDir: config.voicePresetDir || resolve(config.root || process.cwd(), 'config/voice-presets'),
+      providers: createVoiceCloneProviders({
+        dashscopeApiKey: config.dashscopeApiKey,
+        dashscopeTargetModel: config.audioModel,
+        fishApiKey: process.env.FISH_API_KEY,
+        minimaxApiKey: process.env.MINIMAX_API_KEY,
+      }),
+      isCascadeMode: realtimeProvider === 'cascade',
+      getActiveCascade: () => ({
+        provider: process.env.CASCADE_TTS_PROVIDER || 'dashscope',
+        model: process.env.CASCADE_TTS_MODEL || config.audioModel,
+        voice: process.env.CASCADE_TTS_VOICE_ID || config.audioVoice,
+      }),
+      persistCascadeTts,
+      restartGateway: () => restartGateway({ root: config.root }),
+      defaultProvider: process.env.CASCADE_TTS_PROVIDER || 'dashscope',
+    })
 const app = express()
 // 资料条目对外的形状。fingerprint 是内部去重用的，不该出现在 API 里；
 // path 要给出来 —— 它就是交给后端 Agent 的那个地址，是这套机制的用处所在。
@@ -534,7 +568,20 @@ app.use((req, res, next) => {
   })
   next()
 })
-app.use(express.json({ limit: '1mb' }))
+app.use(express.json({ limit: '8mb' }))
+
+registerVoiceRoutes(app, {
+  voiceStudioService,
+  voiceProfileDir: config.voiceProfileDir
+    || resolve(config.configDirectory || config.dataDirectory || process.cwd(), 'voice-profiles'),
+  getCascadeTts: () => ({
+    provider: process.env.CASCADE_TTS_PROVIDER || 'dashscope',
+    apiKey: process.env.CASCADE_TTS_API_KEY || config.dashscopeApiKey,
+    model: process.env.CASCADE_TTS_MODEL || config.audioModel,
+    voice: process.env.CASCADE_TTS_VOICE_ID || config.audioVoice,
+    sampleRate: 24000,
+  }),
+})
 
 let realtimeGateway
 
@@ -1083,6 +1130,7 @@ return {
     runtimeCommands,
     gatewayEventRouter,
     knowledgeProvider: knowledgeProviderRuntime,
+    voiceStudio: voiceStudioService,
     identityManager,
     inputArbitration,
     inputAssets: inputAssetRegistry,
