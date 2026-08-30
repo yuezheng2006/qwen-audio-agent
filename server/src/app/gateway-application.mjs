@@ -90,6 +90,10 @@ import { createVoiceCloneProviders } from '../voice/studio/providers/registry.mj
 import { createVoiceStudioService } from '../voice/studio/service.mjs'
 import { persistCascadeTts } from '../../../scripts/lib/runtime-config-file.mjs'
 import { restartGateway } from './restart-gateway.mjs'
+import {
+  startCascadeServer,
+  stopCascadeServer,
+} from '../voice/cascade/server.mjs'
 
 export function createGatewayApplication({
   config = defaultConfig,
@@ -1050,7 +1054,7 @@ realtimeGateway = attachRealtimeGateway(server, {
 })
 const start = ({ host = config.host, port = config.port } = {}) => {
   if (server.listening) return server
-  server.listen(port, host, () => {
+  const listen = () => server.listen(port, host, () => {
     const address = server.address()
     const boundPort = address && typeof address === 'object' ? address.port : port
     const origin = `http://${host}:${boundPort}`
@@ -1072,6 +1076,19 @@ const start = ({ host = config.host, port = config.port } = {}) => {
       realtimeProvider,
     }, `qwen-audio-agent running at ${origin}`)
   })
+  // Cascade is a local Realtime provider. It must be listening before the
+  // Gateway advertises readiness; otherwise a browser that auto-connects
+  // immediately receives an empty provider URL and crashes the session.
+  if (realtimeProvider === 'cascade') {
+    startCascadeServer({
+      cascadeConfig: config.cascade,
+      log: message => logger.info('cascade.server', { message }),
+    }).then(listen).catch(error => {
+      logger.error('cascade.server_start_failed', { error })
+    })
+  } else {
+    listen()
+  }
   return server
 }
 
@@ -1090,6 +1107,7 @@ const close = () => {
     await frontendOpenApiRuntime?.close?.()
     await frontendKnowledgeRuntime?.close?.()
     await frontendMemoryRuntime?.close?.()
+    if (realtimeProvider === 'cascade') stopCascadeServer()
     unsubscribeSessionTaskJournal?.()
     conversationHistoryRuntime.close?.()
     await sessionJournalRuntime.flush()
