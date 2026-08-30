@@ -291,12 +291,12 @@ export function resolveCascadeConfig(env = process.env) {
     vad: {
       threshold: numberSetting(
         env.CASCADE_VAD_THRESHOLD,
-        0.015,
+        0.04,
         { min: 0.001, max: 0.5 },
       ),
       minSpeechMs: numberSetting(
         env.CASCADE_VAD_MIN_SPEECH_MS,
-        180,
+        320,
         { min: 40, max: 2000 },
       ),
       silenceMs: numberSetting(
