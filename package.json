@@ -59,6 +59,7 @@
     "./media-ffmpeg": "./server/src/media/media-ffmpeg.mjs",
     "./media-transcription": "./server/src/media/media-transcription.mjs",
     "./media-translation": "./server/src/media/media-translation.mjs",
+    "./media-synthesis": "./server/src/media/media-synthesis.mjs",
     "./settings": "./desktop/src/settings-store.mjs",
     "./skin-store": "./desktop/src/skin-store.mjs",
     "./orb/main": "./desktop/src/orb-shell.mjs",

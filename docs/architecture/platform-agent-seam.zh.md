@@ -240,6 +240,7 @@ Voice Studio 是 Platform 的一个工作区；聊天首页、任务中心和记
 - [ ] `/api/voice/*` 标注为 Platform REST 投影，继续保持兼容。
 - [x] MediaJob 阶段、状态和 artifact 引用模型。
 - [x] 带时间轴的转写和分段翻译 Adapter contract。
+- [x] 基于 Voice Profile 的分段合成 Adapter contract。
 
 ### P1：Local Agent 闭环
 
