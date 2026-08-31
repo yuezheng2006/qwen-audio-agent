@@ -5,12 +5,29 @@ import {
   listTtsProviders,
 } from '../src/voice/cascade/adapters/tts.mjs'
 import { VoiceBoxSynthesizer } from '../src/voice/cascade/adapters/voicebox-tts.mjs'
+import { getCascadeTtsPlatformMetadata } from '../../shared/cascade-tts-plugins.mjs'
 
 test('tts registry lists dashscope voicebox fish listenhub minimax', () => {
   assert.deepEqual(
     listTtsProviders().sort(),
     ['dashscope', 'fish', 'listenhub', 'minimax', 'voicebox'],
   )
+})
+
+test('tts providers expose platform runtime and data boundary metadata', () => {
+  assert.deepEqual(getCascadeTtsPlatformMetadata('voicebox'), {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize'],
+    runtime: 'local-sidecar',
+    dataBoundary: 'local',
+  })
+  assert.deepEqual(getCascadeTtsPlatformMetadata('fish'), {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize'],
+    runtime: 'remote',
+    dataBoundary: 'remote-explicit',
+  })
+  assert.equal(getCascadeTtsPlatformMetadata('unknown'), null)
 })
 
 test('voicebox synthesizer posts text and emits pcm', async () => {

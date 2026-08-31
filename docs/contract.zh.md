@@ -100,6 +100,7 @@ Task 事件提供与 A2A 对齐的 `submitted`、
 | `qwen-audio-agent/client-actions` | `ClientActionPort`、内置 Action 名称、capability 映射、请求/结果关联、deadline 与进行中请求去重 |
 | `qwen-audio-agent/agent-delivery` | Provider 无关的 `AgentDelivery` 值与路由模式 |
 | `qwen-audio-agent/platform-capabilities` | Platform capability 名称、插件 Manifest 元数据校验与 Local Agent First 数据边界 |
+| `qwen-audio-agent/cascade-tts-plugins` | Cascade TTS 供应商注册表与各供应商的 Platform runtime / data boundary 元数据 |
 | `qwen-audio-agent/gateway-setup` | `gatewaySetupStatus`、`assertGatewaySetup` |
 | `qwen-audio-agent/gateway-process` | `GatewayProcess`、`createGatewayProcess`、`GATEWAY_READY_MESSAGE`、`DEFAULT_GATEWAY_ENTRY`、`validateGatewayOrigin`、`portInUse` |
 | `qwen-audio-agent/gateway-lease` | `readGatewayLease`、`findRunningGateway`、`acquireGatewayLease` |

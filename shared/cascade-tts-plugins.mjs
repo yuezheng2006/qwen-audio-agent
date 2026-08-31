@@ -33,6 +33,11 @@ export function getCascadeTtsPlugin(providerId) {
   return plugins.get(providerId) || null
 }
 
+export function getCascadeTtsPlatformMetadata(providerId) {
+  const platform = getCascadeTtsPlugin(providerId)?.platform
+  return platform ? { ...platform } : null
+}
+
 export function listCascadeTtsPluginIds() {
   return [...plugins.keys()]
 }
@@ -124,6 +129,12 @@ export function normalizeDashScopeTtsModel(raw) {
 
 registerCascadeTtsPlugin({
   id: 'dashscope',
+  platform: {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize'],
+    runtime: 'remote',
+    dataBoundary: 'remote-explicit',
+  },
   aliases: [],
   preserve: false,
   cascadeLabel: 'Cascade（VAD→STT→LLM→Qwen-Audio-TTS）',
@@ -154,6 +165,12 @@ registerCascadeTtsPlugin({
 
 registerCascadeTtsPlugin({
   id: 'voicebox',
+  platform: {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize'],
+    runtime: 'local-sidecar',
+    dataBoundary: 'local',
+  },
   aliases: [],
   preserve: true,
   cascadeLabel: 'Cascade（VAD→STT→LLM→VoiceBox）',
@@ -173,6 +190,12 @@ registerCascadeTtsPlugin({
 
 registerCascadeTtsPlugin({
   id: 'fish',
+  platform: {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize'],
+    runtime: 'remote',
+    dataBoundary: 'remote-explicit',
+  },
   aliases: ['fishaudio', 'fish-audio'],
   preserve: true,
   cascadeLabel: 'Cascade（VAD→STT→LLM→Fish Audio S2.1）',
@@ -204,6 +227,12 @@ registerCascadeTtsPlugin({
 
 registerCascadeTtsPlugin({
   id: 'listenhub',
+  platform: {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize'],
+    runtime: 'remote',
+    dataBoundary: 'remote-explicit',
+  },
   aliases: ['listen-hub', 'marswave', 'flowtts'],
   preserve: true,
   cascadeLabel: 'Cascade（VAD→STT→LLM→ListenHub）',
@@ -236,6 +265,12 @@ registerCascadeTtsPlugin({
 
 registerCascadeTtsPlugin({
   id: 'minimax',
+  platform: {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize'],
+    runtime: 'remote',
+    dataBoundary: 'remote-explicit',
+  },
   aliases: ['minimaxi'],
   preserve: true,
   cascadeLabel: 'Cascade（VAD→STT→LLM→MiniMax）',
