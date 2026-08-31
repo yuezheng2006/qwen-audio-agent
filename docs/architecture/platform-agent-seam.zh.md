@@ -217,6 +217,7 @@ Voice Studio 是 Platform 的一个工作区；聊天首页、任务中心和记
 - [ ] 为现有 Voice Studio、Faster-Whisper、Cascade TTS 补齐 manifest 元数据。
 - [ ] `VoiceProfile` 和 `Capture` 从 UI state 中独立出来。
 - [ ] `/api/voice/*` 标注为 Platform REST 投影，继续保持兼容。
+- [x] MediaJob 阶段、状态和 artifact 引用模型。
 
 ### P1：Local Agent 闭环
 
