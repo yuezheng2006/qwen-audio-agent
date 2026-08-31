@@ -241,6 +241,7 @@ Voice Studio 是 Platform 的一个工作区；聊天首页、任务中心和记
 - [x] MediaJob 阶段、状态和 artifact 引用模型。
 - [x] 带时间轴的转写和分段翻译 Adapter contract。
 - [x] 基于 Voice Profile 的分段合成 Adapter contract。
+- [x] 配音片段时间适配和视频 remux Adapter contract。
 
 ### P1：Local Agent 闭环
 

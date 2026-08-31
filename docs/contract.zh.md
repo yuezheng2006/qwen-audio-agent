@@ -106,6 +106,8 @@ Task 事件提供与 A2A 对齐的 `submitted`、
 | `qwen-audio-agent/media-transcription` | 带时间轴语音分段的 ASR / WhisperX Adapter contract |
 | `qwen-audio-agent/media-translation` | 保留时间轴和说话人的分段翻译 Adapter contract |
 | `qwen-audio-agent/media-synthesis` | 使用 Voice Profile 生成带时间轴配音片段的 TTS Adapter contract |
+| `qwen-audio-agent/media-timing` | 使用 FFmpeg 将配音片段适配到目标时间轴的 Adapter |
+| `qwen-audio-agent/media-remux` | 将原视频与配音音轨安全合成为视频 artifact 的 Adapter |
 | `qwen-audio-agent/gateway-setup` | `gatewaySetupStatus`、`assertGatewaySetup` |
 | `qwen-audio-agent/gateway-process` | `GatewayProcess`、`createGatewayProcess`、`GATEWAY_READY_MESSAGE`、`DEFAULT_GATEWAY_ENTRY`、`validateGatewayOrigin`、`portInUse` |
 | `qwen-audio-agent/gateway-lease` | `readGatewayLease`、`findRunningGateway`、`acquireGatewayLease` |

@@ -60,6 +60,8 @@
     "./media-transcription": "./server/src/media/media-transcription.mjs",
     "./media-translation": "./server/src/media/media-translation.mjs",
     "./media-synthesis": "./server/src/media/media-synthesis.mjs",
+    "./media-timing": "./server/src/media/media-timing.mjs",
+    "./media-remux": "./server/src/media/media-remux.mjs",
     "./settings": "./desktop/src/settings-store.mjs",
     "./skin-store": "./desktop/src/skin-store.mjs",
     "./orb/main": "./desktop/src/orb-shell.mjs",
