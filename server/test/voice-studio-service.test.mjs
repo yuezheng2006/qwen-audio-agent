@@ -121,6 +121,9 @@ test('serializeProfile omits sample paths, owner internals, and provider payload
   assert.equal('sampleRef' in serialized, false)
   assert.equal('ownerId' in serialized, false)
   assert.equal('providerPayload' in serialized, false)
+  assert.equal(serialized.runtime, 'remote')
+  assert.deepEqual(serialized.capabilities, ['speech.synthesize'])
+  assert.deepEqual(serialized.sample_refs, [])
   assert.equal(JSON.stringify(serialized).includes('/private/'), false)
 })
 

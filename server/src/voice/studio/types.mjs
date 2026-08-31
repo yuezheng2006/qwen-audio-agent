@@ -14,6 +14,7 @@ export function serializeProfile(profile) {
     source,
     presetId,
     provider,
+    runtime,
     remoteId,
     targetModel,
     status,
@@ -23,6 +24,7 @@ export function serializeProfile(profile) {
     confirmedAt,
     favorite,
     tags,
+    capabilities,
   } = profile
   return {
     id,
@@ -30,6 +32,11 @@ export function serializeProfile(profile) {
     source,
     presetId: presetId ?? null,
     provider,
+    runtime: runtime || 'remote',
+    capabilities: Array.isArray(capabilities)
+      ? capabilities.map(String)
+      : ['speech.synthesize'],
+    sample_refs: [],
     targetModel: targetModel ?? null,
     status,
     error: error ?? null,

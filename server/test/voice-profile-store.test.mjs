@@ -24,6 +24,9 @@ test('voice profile store upsert list and serialize remote_voice_id', () => {
     const json = serializeProfile(row)
     assert.equal(json.remote_voice_id, 'voice-abc')
     assert.equal('remoteId' in json, false)
+    assert.equal(json.runtime, 'remote')
+    assert.deepEqual(json.capabilities, ['speech.synthesize'])
+    assert.deepEqual(json.sample_refs, [])
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

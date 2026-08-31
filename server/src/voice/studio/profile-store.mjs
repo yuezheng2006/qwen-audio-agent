@@ -9,6 +9,7 @@ import { join } from 'node:path'
 
 const MAX_TAG_LEN = 32
 const MAX_TAGS = 16
+const DEFAULT_PROFILE_CAPABILITIES = Object.freeze(['speech.synthesize'])
 
 export function invalidTagsError(message = '标签不合法') {
   const error = new Error(message)
@@ -121,6 +122,10 @@ function normalizeProfile(ownerId, profile = {}, { now, isNew }) {
     presetId: profile.presetId ?? null,
     sampleRef: profile.sampleRef ?? null,
     provider: String(profile.provider || ''),
+    runtime: String(profile.runtime || 'remote'),
+    capabilities: Array.isArray(profile.capabilities)
+      ? [...new Set(profile.capabilities.map(String).filter(Boolean))]
+      : [...DEFAULT_PROFILE_CAPABILITIES],
     remoteId: String(profile.remoteId || ''),
     targetModel: profile.targetModel ?? null,
     status: String(profile.status || 'draft'),
