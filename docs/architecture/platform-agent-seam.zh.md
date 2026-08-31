@@ -62,6 +62,27 @@ Platform Core 必须负责：
 - 长任务的进度、取消、重试、恢复和诊断。
 - 将内部引擎错误归一化为用户可理解的错误。
 
+### Media Platform 分层约束
+
+媒体能力采用四层，依赖只能向下：
+
+```text
+Media Workspace / Client UI
+            ↓ 只读 Job snapshot、提交用户意图
+Media Orchestrator
+            ↓ 调度阶段、保存 checkpoint、管理 artifact
+Media Adapters
+            ↓ 调用具体引擎
+Engine / System Tools（FFmpeg、WhisperX、VoxCPM2、翻译服务）
+```
+
+- Agent Core 只能提交媒体目标和用户选项，不能 import FFmpeg、Whisper、Torch 或供应商 SDK。
+- UI 只能依赖 `MediaJob` snapshot、阶段事件和公开 artifact，不能读中间目录或进程状态。
+- Orchestrator 只能通过 Adapter contract 调用引擎；供应商格式、命令行参数和模型路径必须停留在 Adapter 内。
+- Adapter 不得创建 Agent Session、修改 Memory 或直接驱动 UI；失败必须返回结构化错误。
+- 任何远程翻译、远程 TTS 或远程 Worker 都必须在 Job 的 privacy 状态中显式记录。
+- 新增媒体阶段先增加 contract 与 fake-adapter 测试，再接入真实引擎；不得从 UI 反向定义引擎接口。
+
 ## Capability Contract
 
 第一版能力名采用稳定的点号命名：
