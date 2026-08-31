@@ -57,6 +57,7 @@
     "./cascade-tts-plugins": "./shared/cascade-tts-plugins.mjs",
     "./media-job": "./server/src/media/media-job.mjs",
     "./media-ffmpeg": "./server/src/media/media-ffmpeg.mjs",
+    "./media-transcription": "./server/src/media/media-transcription.mjs",
     "./settings": "./desktop/src/settings-store.mjs",
     "./skin-store": "./desktop/src/skin-store.mjs",
     "./orb/main": "./desktop/src/orb-shell.mjs",
