@@ -533,6 +533,7 @@ const runtimeCommands = clientCommandRuntime || new GatewayClientCommandRuntime(
     agent.respondInput(taskId, id, response, options)
   ),
   permissionPolicy,
+  voiceStudioService,
   logger,
 })
 const gatewayEventRouter = clientEventRouter || new GatewayEventRouter({

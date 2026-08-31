@@ -33,6 +33,7 @@ test('publishes a frozen capability vocabulary and only advertises implemented s
     GatewayClientCapability.CLIENT_ACTION_ENTER_SLEEP,
   ))
   assert.ok(GATEWAY_CLIENT_KNOWN_CAPABILITIES.includes(GatewayClientCapability.SESSION_REPLAY))
+  assert.ok(GATEWAY_CLIENT_KNOWN_CAPABILITIES.includes(GatewayClientCapability.VOICE_PROFILES))
   assert.ok(GATEWAY_CLIENT_KNOWN_CAPABILITIES.includes(
     GatewayClientCapability.SESSION_OUTPUT_VOICE,
   ))
@@ -182,6 +183,22 @@ test('validates runtime commands, Client Actions and correlated results', () => 
     gatewayClientProtocolCapabilityFor(replay.type),
     GatewayClientCapability.SESSION_REPLAY,
   )
+  const profileList = parseGatewayClientProtocolMessage({
+    type: GatewayClientProtocolEvent.VOICE_PROFILE_LIST,
+    event_id: 'evt_voice_list',
+    favorite: true,
+  })
+  assert.equal(profileList.favorite, true)
+  assert.equal(
+    gatewayClientProtocolCapabilityFor(profileList.type),
+    GatewayClientCapability.VOICE_PROFILES,
+  )
+  const profileSelect = parseGatewayClientProtocolMessage({
+    type: GatewayClientProtocolEvent.VOICE_PROFILE_SELECT,
+    event_id: 'evt_voice_select',
+    profile_id: 'voice_1',
+  })
+  assert.equal(profileSelect.profile_id, 'voice_1')
   assert.throws(() => parseGatewayClientProtocolMessage({
     type: GatewayClientProtocolEvent.SESSION_REPLAY,
     event_id: 'evt_client_replay_unbounded',

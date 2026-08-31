@@ -79,6 +79,18 @@ function harness(overrides = {}) {
       return { status: 'accepted' }
     },
     permissionPolicy: null,
+    voiceStudioService: {
+      list: () => ({
+        profiles: [{ id: 'voice_1', label: '本地声音' }],
+        tag_counts: { personal: 1 },
+      }),
+      status: () => ({ active: { provider: 'voicebox', voice: 'voice_1' } }),
+      confirm: async (_ownerId, input) => ({
+        status: 'ok',
+        profile: { id: input.profile_id },
+        switching: input.restart,
+      }),
+    },
     ...overrides,
   })
   return { runtime, records, calls }
@@ -118,6 +130,37 @@ test('executes correlated task and conversation runtime commands', async () => {
     event_id: 'evt-history-1',
   }, { ownerId: 'owner-1', sessionId: 'voice-1' })
   assert.deepEqual(history.messages, [{ role: 'user', text: 'owner-1:voice-1' }])
+})
+
+test('executes voice profile list and select commands through the platform service', async () => {
+  const { runtime } = harness()
+  const listed = await runtime.execute({
+    type: GatewayClientProtocolEvent.VOICE_PROFILE_LIST,
+    event_id: 'evt-voice-list-1',
+    tag: 'personal',
+  }, { ownerId: 'owner-1' })
+  assert.equal(listed.type, GatewayClientProtocolEvent.VOICE_PROFILE_LIST_RESULT)
+  assert.deepEqual(listed.profiles, [{ id: 'voice_1', label: '本地声音' }])
+  assert.deepEqual(listed.active, { provider: 'voicebox', voice: 'voice_1' })
+
+  const selected = await runtime.execute({
+    type: GatewayClientProtocolEvent.VOICE_PROFILE_SELECT,
+    event_id: 'evt-voice-select-1',
+    profile_id: 'voice_1',
+    restart: true,
+  }, { ownerId: 'owner-1' })
+  assert.equal(selected.type, GatewayClientProtocolEvent.VOICE_PROFILE_SELECT_RESULT)
+  assert.equal(selected.result.profile.id, 'voice_1')
+  assert.equal(selected.result.switching, true)
+})
+
+test('voice profile commands fail clearly when the platform service is unavailable', async () => {
+  const { runtime } = harness({ voiceStudioService: null })
+  assert.equal(runtime.supportsVoiceProfiles, false)
+  await assert.rejects(() => runtime.execute({
+    type: GatewayClientProtocolEvent.VOICE_PROFILE_LIST,
+    event_id: 'evt-voice-list-2',
+  }, { ownerId: 'owner-1' }), error => error.code === 'voice_unavailable')
 })
 
 test('cancels active tasks asynchronously and rejects terminal tasks', async () => {

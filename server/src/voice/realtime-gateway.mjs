@@ -186,6 +186,9 @@ export function attachRealtimeGateway(server, {
         GatewayClientCapability.INPUT_RESPOND,
         GatewayClientCapability.CONVERSATION_HISTORY,
       ].includes(capability)) return Boolean(clientCommandRuntime)
+      if (capability === GatewayClientCapability.VOICE_PROFILES) {
+        return Boolean(clientCommandRuntime?.supportsVoiceProfiles)
+      }
       return true
     })
   const activeVoiceClients = new ActiveVoiceClients()

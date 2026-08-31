@@ -43,6 +43,7 @@ export class GatewayClientCommandRuntime {
     respondAuthorization,
     respondInput,
     permissionPolicy,
+    voiceStudioService = null,
     logger = null,
   } = {}) {
     if (!taskManager) throw new TypeError('taskManager is required')
@@ -54,6 +55,12 @@ export class GatewayClientCommandRuntime {
     this.respondAuthorization = respondAuthorization
     this.respondInput = respondInput
     this.permissionPolicy = permissionPolicy
+    this.voiceStudioService = voiceStudioService
+    this.supportsVoiceProfiles = Boolean(
+      voiceStudioService?.list
+      && voiceStudioService?.status
+      && voiceStudioService?.confirm,
+    )
     this.logger = logger
   }
 
@@ -102,6 +109,18 @@ export class GatewayClientCommandRuntime {
           type: GatewayClientProtocolEvent.CONVERSATION_HISTORY_RESULT,
           ...common,
           messages: await this.history(message, context),
+        }
+      case GatewayClientProtocolEvent.VOICE_PROFILE_LIST:
+        return {
+          type: GatewayClientProtocolEvent.VOICE_PROFILE_LIST_RESULT,
+          ...common,
+          ...(await this.listVoiceProfiles(message, context)),
+        }
+      case GatewayClientProtocolEvent.VOICE_PROFILE_SELECT:
+        return {
+          type: GatewayClientProtocolEvent.VOICE_PROFILE_SELECT_RESULT,
+          ...common,
+          result: await this.selectVoiceProfile(message, context),
         }
       default:
         throw new RuntimeCommandError(
@@ -248,5 +267,40 @@ export class GatewayClientCommandRuntime {
       ownerId,
       sessionId: message.session_id || sessionId,
     })
+  }
+
+  async listVoiceProfiles(message = {}, { ownerId } = {}) {
+    if (!this.voiceStudioService?.list || !this.voiceStudioService?.status) {
+      throw new RuntimeCommandError('voice_unavailable', 'voice profile runtime unavailable')
+    }
+    const result = this.voiceStudioService.list(ownerId, {
+      status: message.status,
+      favorite: message.favorite,
+      tag: message.tag,
+      q: message.q,
+    })
+    const status = this.voiceStudioService.status(ownerId)
+    return {
+      profiles: result?.profiles || [],
+      tag_counts: result?.tag_counts || {},
+      active: status?.active || null,
+    }
+  }
+
+  async selectVoiceProfile(message = {}, { ownerId } = {}) {
+    if (!this.voiceStudioService?.confirm) {
+      throw new RuntimeCommandError('voice_unavailable', 'voice profile runtime unavailable')
+    }
+    const result = await this.voiceStudioService.confirm(ownerId, {
+      profile_id: clean(message.profile_id),
+      restart: message.restart === true,
+    })
+    if (result?.status !== 'ok') {
+      throw new RuntimeCommandError(
+        result?.error_code || 'voice_select_failed',
+        result?.user_message || 'voice profile selection failed',
+      )
+    }
+    return result
   }
 }

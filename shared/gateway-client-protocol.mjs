@@ -40,6 +40,10 @@ export const GatewayClientProtocolEvent = Object.freeze({
   CONVERSATION_HISTORY_RESULT: 'conversation.history.result',
   SESSION_REPLAY: 'session.replay',
   SESSION_REPLAY_RESULT: 'session.replay.result',
+  VOICE_PROFILE_LIST: 'voice.profile.list',
+  VOICE_PROFILE_LIST_RESULT: 'voice.profile.list.result',
+  VOICE_PROFILE_SELECT: 'voice.profile.select',
+  VOICE_PROFILE_SELECT_RESULT: 'voice.profile.select.result',
 })
 
 export const GatewayClientCapability = Object.freeze({
@@ -56,6 +60,7 @@ export const GatewayClientCapability = Object.freeze({
   SESSION_OUTPUT_VOICE: 'session.output_voice',
   CLIENT_ACTION_ENTER_SLEEP: 'client.actions.desktop.presence.enter_sleep',
   SESSION_REPLAY: 'session.replay',
+  VOICE_PROFILES: 'voice.profiles',
 })
 
 export const GatewayClientActionName = Object.freeze({
@@ -84,6 +89,7 @@ export const GATEWAY_CLIENT_IMPLEMENTED_CAPABILITIES = Object.freeze([
   GatewayClientCapability.SESSION_OUTPUT_VOICE,
   GatewayClientCapability.CLIENT_ACTION_ENTER_SLEEP,
   GatewayClientCapability.SESSION_REPLAY,
+  GatewayClientCapability.VOICE_PROFILES,
 ])
 
 const IdentifierSchema = z.string().min(1).max(128)
@@ -265,6 +271,20 @@ export const GatewaySessionReplaySchema = GatewayClientEnvelopeSchema.extend({
   limit: z.number().int().min(1).max(200).default(50),
 })
 
+export const GatewayVoiceProfileListSchema = GatewayClientEnvelopeSchema.extend({
+  type: z.literal(GatewayClientProtocolEvent.VOICE_PROFILE_LIST),
+  status: z.string().min(1).max(40).optional(),
+  favorite: z.boolean().optional(),
+  tag: z.string().min(1).max(80).optional(),
+  q: z.string().max(160).optional(),
+})
+
+export const GatewayVoiceProfileSelectSchema = GatewayClientEnvelopeSchema.extend({
+  type: z.literal(GatewayClientProtocolEvent.VOICE_PROFILE_SELECT),
+  profile_id: IdentifierSchema,
+  restart: z.boolean().optional(),
+})
+
 const TaskResultBaseSchema = GatewayServerEnvelopeSchema.extend({
   request_event_id: IdentifierSchema,
   task: GatewayTaskSchema,
@@ -308,6 +328,18 @@ export const GatewaySessionReplayResultSchema = GatewayServerEnvelopeSchema.exte
   next_sequence: z.number().int().nonnegative(),
   has_more: z.boolean(),
 })
+export const GatewayVoiceProfileListResultSchema = GatewayServerEnvelopeSchema.extend({
+  type: z.literal(GatewayClientProtocolEvent.VOICE_PROFILE_LIST_RESULT),
+  request_event_id: IdentifierSchema,
+  profiles: z.array(z.unknown()).max(500),
+  tag_counts: z.record(z.number().int().nonnegative()),
+  active: z.unknown().nullable(),
+})
+export const GatewayVoiceProfileSelectResultSchema = GatewayServerEnvelopeSchema.extend({
+  type: z.literal(GatewayClientProtocolEvent.VOICE_PROFILE_SELECT_RESULT),
+  request_event_id: IdentifierSchema,
+  result: z.unknown(),
+})
 
 const GATEWAY_RUNTIME_CLIENT_MESSAGE_SCHEMAS = Object.freeze({
   [GatewayClientProtocolEvent.CLIENT_EVENT_PUBLISH]: GatewayClientEventPublishSchema,
@@ -321,6 +353,8 @@ const GATEWAY_RUNTIME_CLIENT_MESSAGE_SCHEMAS = Object.freeze({
   [GatewayClientProtocolEvent.INPUT_RESPOND]: GatewayInputRespondSchema,
   [GatewayClientProtocolEvent.CONVERSATION_HISTORY]: GatewayConversationHistorySchema,
   [GatewayClientProtocolEvent.SESSION_REPLAY]: GatewaySessionReplaySchema,
+  [GatewayClientProtocolEvent.VOICE_PROFILE_LIST]: GatewayVoiceProfileListSchema,
+  [GatewayClientProtocolEvent.VOICE_PROFILE_SELECT]: GatewayVoiceProfileSelectSchema,
 })
 
 const GATEWAY_RUNTIME_SERVER_MESSAGE_SCHEMAS = Object.freeze({
@@ -335,6 +369,8 @@ const GATEWAY_RUNTIME_SERVER_MESSAGE_SCHEMAS = Object.freeze({
   [GatewayClientProtocolEvent.INPUT_RESPOND_RESULT]: GatewayInputRespondResultSchema,
   [GatewayClientProtocolEvent.CONVERSATION_HISTORY_RESULT]: GatewayConversationHistoryResultSchema,
   [GatewayClientProtocolEvent.SESSION_REPLAY_RESULT]: GatewaySessionReplayResultSchema,
+  [GatewayClientProtocolEvent.VOICE_PROFILE_LIST_RESULT]: GatewayVoiceProfileListResultSchema,
+  [GatewayClientProtocolEvent.VOICE_PROFILE_SELECT_RESULT]: GatewayVoiceProfileSelectResultSchema,
 })
 
 const GATEWAY_RUNTIME_REQUIRED_CAPABILITIES = Object.freeze({
@@ -349,6 +385,8 @@ const GATEWAY_RUNTIME_REQUIRED_CAPABILITIES = Object.freeze({
   [GatewayClientProtocolEvent.INPUT_RESPOND]: GatewayClientCapability.INPUT_RESPOND,
   [GatewayClientProtocolEvent.CONVERSATION_HISTORY]: GatewayClientCapability.CONVERSATION_HISTORY,
   [GatewayClientProtocolEvent.SESSION_REPLAY]: GatewayClientCapability.SESSION_REPLAY,
+  [GatewayClientProtocolEvent.VOICE_PROFILE_LIST]: GatewayClientCapability.VOICE_PROFILES,
+  [GatewayClientProtocolEvent.VOICE_PROFILE_SELECT]: GatewayClientCapability.VOICE_PROFILES,
 })
 
 const V6_CLIENT_EVENT_ALIASES = Object.freeze({
