@@ -402,4 +402,26 @@ export function registerVoiceRoutes(app, {
       res.status(500).json({ error: error.message })
     }
   })
+
+  // Platform naming: selecting a ready profile is the public operation;
+  // /confirm remains as the backwards-compatible alias used by older UI.
+  app.post('/api/voice/profiles/:id/select', async (req, res) => {
+    if (!voiceStudioService) return unavailable(res)
+    try {
+      const result = await voiceStudioService.confirm(req.identity?.ownerId, {
+        ...(req.body || {}),
+        profile_id: String(req.params.id || '').trim(),
+      })
+      if (result.status !== 'ok') {
+        const status = result.error_code === 'mode_conflict' ? 409 : 400
+        return res.status(status).json({
+          error: result.user_message || '选择音色失败',
+          error_code: result.error_code,
+        })
+      }
+      res.json(result)
+    } catch (error) {
+      res.status(500).json({ error: error.message })
+    }
+  })
 }

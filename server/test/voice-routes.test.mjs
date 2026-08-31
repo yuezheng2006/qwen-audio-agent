@@ -298,6 +298,29 @@ test('POST /api/voice/confirm delegates to service', async () => {
   })
 })
 
+test('POST /api/voice/profiles/:id/select exposes the platform selection name', async () => {
+  let selected
+  await withServer(app => {
+    registerVoiceRoutes(app, {
+      voiceStudioService: mockService({
+        async confirm(_ownerId, input) {
+          selected = input
+          return { status: 'ok', switching: false, profile: { id: input.profile_id } }
+        },
+      }),
+    })
+  }, async base => {
+    const res = await fetch(`${base}/api/voice/profiles/p2/select`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restart: true }),
+    })
+    assert.equal(res.status, 200)
+    assert.equal((await res.json()).profile.id, 'p2')
+    assert.deepEqual(selected, { restart: true, profile_id: 'p2' })
+  })
+})
+
 test('routes return 503 when voice studio disabled', async () => {
   await withServer(app => {
     registerVoiceRoutes(app, {
