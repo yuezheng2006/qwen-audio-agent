@@ -102,6 +102,7 @@ Task 事件提供与 A2A 对齐的 `submitted`、
 | `qwen-audio-agent/platform-capabilities` | Platform capability 名称、插件 Manifest 元数据校验与 Local Agent First 数据边界 |
 | `qwen-audio-agent/cascade-tts-plugins` | Cascade TTS 供应商注册表与各供应商的 Platform runtime / data boundary 元数据 |
 | `qwen-audio-agent/media-job` | 视频/音频媒体流水线的阶段、状态、artifact 引用与恢复模型 |
+| `qwen-audio-agent/media-ffmpeg` | 媒体探测与音频提取的可注入 FFmpeg Adapter |
 | `qwen-audio-agent/gateway-setup` | `gatewaySetupStatus`、`assertGatewaySetup` |
 | `qwen-audio-agent/gateway-process` | `GatewayProcess`、`createGatewayProcess`、`GATEWAY_READY_MESSAGE`、`DEFAULT_GATEWAY_ENTRY`、`validateGatewayOrigin`、`portInUse` |
 | `qwen-audio-agent/gateway-lease` | `readGatewayLease`、`findRunningGateway`、`acquireGatewayLease` |
