@@ -1,12 +1,16 @@
-export const fasterWhisperPluginManifest = Object.freeze({
+import { definePluginManifest } from '../manifest.mjs'
+
+export const fasterWhisperPluginManifest = definePluginManifest({
   id: 'qwaudio.stt.faster-whisper',
   version: '1.0.0',
   kind: 'stt',
   label: 'faster-whisper 本地识别',
   description: '通过本地 HTTP 服务调用 faster-whisper。',
-  capabilities: ['stt.utterance'],
+  capabilities: ['stt.utterance', 'speech.transcribe'],
   platforms: ['server', 'macos', 'windows', 'linux'],
   permissions: ['network.loopback'],
+  runtime: 'local-sidecar',
+  dataBoundary: 'local',
 })
 
 function pcm16Wav(pcm, sampleRate = 16000, channels = 1) {

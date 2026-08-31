@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createRecognizer } from '../src/voice/cascade/adapters/stt.mjs'
-import { createFasterWhisperRecognizer } from '../src/plugins/builtin/faster-whisper.mjs'
+import {
+  createFasterWhisperRecognizer,
+  fasterWhisperPluginManifest,
+} from '../src/plugins/builtin/faster-whisper.mjs'
 import {
   cascadeTestConfig,
   startFakeDashScope,
@@ -123,6 +126,9 @@ test('faster-whisper recognizer sends one WAV utterance to a local endpoint', as
 })
 
 test('faster-whisper is registered through the STT plugin boundary', async () => {
+  assert.deepEqual(fasterWhisperPluginManifest.platformCapabilities, ['speech.transcribe'])
+  assert.equal(fasterWhisperPluginManifest.runtime, 'local-sidecar')
+  assert.equal(fasterWhisperPluginManifest.dataBoundary, 'local')
   const recognizer = createRecognizer({
     stt: { provider: 'faster-whisper', url: 'http://localhost/transcribe' },
   }, {
