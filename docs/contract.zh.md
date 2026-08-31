@@ -6,6 +6,11 @@
 
 本文件中的每一条承诺都有测试锁定；各节表格中注明了对应测试。
 
+Agent Core 与 Platform Core 的职责边界、平台能力插件契约和跨端演进约束见
+[Agent / Platform 解耦规范](./architecture/platform-agent-seam.zh.md)。该规范补充本
+Gateway 契约：Agent 使用本仓库现有的会话与消息边界，语音输入、播报、转写、音色和
+设备能力由可替换的 Platform 插件提供。
+
 ## 协议版本与能力位
 
 `GET /api/health` 返回 `protocolVersion` 与 `capabilities`。客户端应按能力位
@@ -94,6 +99,7 @@ Task 事件提供与 A2A 对齐的 `submitted`、
 | `qwen-audio-agent/client-events` | 供 Gateway 扩展使用的 Client Event Definition Registry、内置定义、路由 Policy 与 `GatewayEventRouter` |
 | `qwen-audio-agent/client-actions` | `ClientActionPort`、内置 Action 名称、capability 映射、请求/结果关联、deadline 与进行中请求去重 |
 | `qwen-audio-agent/agent-delivery` | Provider 无关的 `AgentDelivery` 值与路由模式 |
+| `qwen-audio-agent/platform-capabilities` | Platform capability 名称、插件 Manifest 元数据校验与 Local Agent First 数据边界 |
 | `qwen-audio-agent/gateway-setup` | `gatewaySetupStatus`、`assertGatewaySetup` |
 | `qwen-audio-agent/gateway-process` | `GatewayProcess`、`createGatewayProcess`、`GATEWAY_READY_MESSAGE`、`DEFAULT_GATEWAY_ENTRY`、`validateGatewayOrigin`、`portInUse` |
 | `qwen-audio-agent/gateway-lease` | `readGatewayLease`、`findRunningGateway`、`acquireGatewayLease` |

@@ -1,3 +1,5 @@
+import { validatePlatformManifestMetadata } from '../../../shared/platform-capabilities.mjs'
+
 export const PLUGIN_API_VERSION = '1'
 
 const PLUGIN_KINDS = new Set([
@@ -40,6 +42,7 @@ export function validatePluginManifest(manifest) {
     capabilities: listOfStrings(manifest.capabilities, 'capabilities'),
     platforms: listOfStrings(manifest.platforms, 'platforms'),
     permissions: listOfStrings(manifest.permissions, 'permissions'),
+    ...validatePlatformManifestMetadata(manifest),
   })
 }
 

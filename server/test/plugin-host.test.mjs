@@ -17,6 +17,28 @@ test('plugin manifest validates and normalizes metadata', () => {
   }), /id 无效/)
 })
 
+test('platform plugin metadata validates without changing legacy manifests', () => {
+  const legacy = definePluginManifest({
+    id: 'demo.legacy', version: '1.0.0', kind: 'tool', label: 'Legacy',
+  })
+  assert.equal(legacy.platformApiVersion, undefined)
+  const platform = definePluginManifest({
+    id: 'demo.stt', version: '1.0.0', kind: 'stt', label: 'Local STT',
+    capabilities: ['speech.transcribe'],
+    platforms: ['macos'],
+    runtime: 'local-sidecar',
+    dataBoundary: 'local',
+    healthcheck: { kind: 'http', url: 'http://127.0.0.1:8000/health' },
+  })
+  assert.equal(platform.platformApiVersion, '0.1')
+  assert.deepEqual(platform.platformCapabilities, ['speech.transcribe'])
+  assert.equal(platform.healthcheck.kind, 'http')
+  assert.throws(() => definePluginManifest({
+    id: 'demo.remote', version: '1.0.0', kind: 'tts', label: 'Remote',
+    capabilities: ['speech.synthesize'], runtime: 'remote', dataBoundary: 'local',
+  }), /不能声明 local dataBoundary/)
+})
+
 test('plugin host activates, reports, and deactivates plugins', async () => {
   const host = createPluginHost()
   host.register({
