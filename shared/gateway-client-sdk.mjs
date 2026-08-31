@@ -18,6 +18,8 @@ const RESULT_TYPES = new Set([
   GatewayClientProtocolEvent.PERMISSION_RESPOND_RESULT,
   GatewayClientProtocolEvent.CONVERSATION_HISTORY_RESULT,
   GatewayClientProtocolEvent.SESSION_REPLAY_RESULT,
+  GatewayClientProtocolEvent.VOICE_PROFILE_LIST_RESULT,
+  GatewayClientProtocolEvent.VOICE_PROFILE_SELECT_RESULT,
   'error',
 ])
 
@@ -233,6 +235,17 @@ export class GatewayClient {
     }
     this.onRecovery?.(recovered)
     return recovered
+  }
+
+  listVoiceProfiles(options = {}) {
+    return this.request(GatewayClientProtocolEvent.VOICE_PROFILE_LIST, options)
+  }
+
+  selectVoiceProfile(profileId, { restart = false } = {}) {
+    return this.request(GatewayClientProtocolEvent.VOICE_PROFILE_SELECT, {
+      profile_id: String(profileId),
+      restart: restart === true,
+    })
   }
 
   #connect() {
