@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import VoiceGallery from './VoiceGallery.jsx'
+import MediaWorkspacePanel from './MediaWorkspacePanel.jsx'
 import {
   VOICE_STUDIO_TILES,
   resolveVoiceStudioView,
@@ -440,6 +441,8 @@ export default function VoiceStudioPanel({
     ? '声音库'
     : view === 'clone'
       ? '克隆'
+      : view === 'dub'
+        ? '视频配音'
       : '语音工作室'
 
   const onTile = (tile) => {
@@ -527,6 +530,7 @@ export default function VoiceStudioPanel({
             onModeSwitching={onModeSwitching}
           />
         )}
+        {view === 'dub' && <MediaWorkspacePanel open={open && view === 'dub'} />}
       </div>
     </div>
   )

@@ -84,6 +84,7 @@ import {
   GatewayEventRouter,
 } from '../client/client-event-router.mjs'
 import { registerVoiceRoutes } from './voice-routes.mjs'
+import { registerMediaRoutes } from './media-routes.mjs'
 import { createVoiceProfileStore } from '../voice/studio/profile-store.mjs'
 import { loadPresetCatalog } from '../voice/studio/preset-catalog.mjs'
 import { createVoiceCloneProviders } from '../voice/studio/providers/registry.mjs'
@@ -126,6 +127,7 @@ export function createGatewayApplication({
   clientEventRouter = null,
   clientEventDefinitions = [],
   spawnThinkingDescription = '',
+  mediaOrchestrator = null,
 } = {}) {
 const workBackend = backendRuntime || new BackendWorkRuntime({ backend: agent })
 const sessionJournalRuntime = sessionJournal || defaultTaskSessionJournal
@@ -573,6 +575,7 @@ app.use((req, res, next) => {
   })
   next()
 })
+app.use('/api/media/assets', express.raw({ type: 'application/octet-stream', limit: '256mb' }))
 app.use(express.json({ limit: '8mb' }))
 
 registerVoiceRoutes(app, {
@@ -586,6 +589,11 @@ registerVoiceRoutes(app, {
     voice: process.env.CASCADE_TTS_VOICE_ID || config.audioVoice,
     sampleRate: 24000,
   }),
+})
+
+registerMediaRoutes(app, {
+  mediaOrchestrator,
+  mediaDirectory: resolve(config.dataDirectory || config.configDirectory || process.cwd(), 'media-assets'),
 })
 
 let realtimeGateway

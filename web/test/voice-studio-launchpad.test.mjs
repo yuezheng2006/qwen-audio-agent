@@ -8,7 +8,7 @@ import {
 
 test('launchpad includes live gallery and clone tiles', () => {
   const live = VOICE_STUDIO_TILES.filter(item => item.status === 'live').map(item => item.id)
-  assert.deepEqual(live, ['gallery', 'clone', 'audiobook'])
+  assert.deepEqual(live, ['gallery', 'clone', 'dub', 'audiobook'])
   const gallery = VOICE_STUDIO_TILES.find(item => item.id === 'gallery')
   assert.equal(gallery.blurb, '试听声音，并选它来和助手聊天')
   assert.ok(VOICE_STUDIO_TILES.some(item => item.id === 'engines' && item.status === 'jump'))

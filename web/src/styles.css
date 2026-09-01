@@ -1882,6 +1882,28 @@ header select.frontend-provider option {
 }
 
 /* Voice Studio recording surface */
+.media-workspace-intro { margin-bottom: 18px; }
+.media-workspace-intro strong { color: #f1edf8; font-size: 18px; }
+.media-workspace-intro p { max-width: 620px; margin: 7px 0 0; color: #918b9f; font-size: 13px; line-height: 1.55; }
+.media-job-form { display: grid; gap: 14px; max-width: 680px; }
+.media-dropzone { display: grid; gap: 7px; padding: 26px 20px; border: 1px dashed #665b83; border-radius: 16px; background: #15121f; color: #eee9f7; cursor: pointer; }
+.media-dropzone:hover { border-color: #9b82ff; background: #1a1628; }
+.media-dropzone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.media-dropzone small { color: #898394; font-size: 11px; }
+.media-job-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.media-job-progress { margin-top: 24px; padding: 16px; border: 1px solid #292335; border-radius: 14px; background: #100e16; }
+.media-job-progress-head { display: flex; justify-content: space-between; gap: 12px; color: #f1edf8; }
+.media-job-progress-head span { color: #9c91ad; font-size: 12px; }
+.media-phase-list { display: grid; gap: 8px; margin-top: 14px; }
+.media-phase { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 8px; color: #777181; font-size: 12px; }
+.media-phase i { width: 7px; height: 7px; border-radius: 50%; background: #4d4856; }
+.media-phase span { color: #777181; font-size: 11px; }
+.media-phase.completed { color: #d9d1e7; }
+.media-phase.completed i { background: #4ed9a0; }
+.media-phase.running { color: #d6c8ff; }
+.media-phase.running i { background: #a98dff; box-shadow: 0 0 10px #a98dff; }
+.media-phase.failed { color: #ff9ba3; }
+.media-phase.failed i { background: #ff6f7d; }
 .voice-recorder {
   display: grid;
   gap: 14px;
@@ -1948,6 +1970,7 @@ header select.frontend-provider option {
 
 @media (max-width: 600px) {
   .voice-studio-launchpad { grid-template-columns: 1fr; }
+  .media-job-fields { grid-template-columns: 1fr; }
   .voice-recorder-actions { align-items: stretch; flex-direction: column; }
   .voice-recorder-actions audio { width: 100%; }
   .voice-clip-actions { align-items: stretch; flex-direction: column; }

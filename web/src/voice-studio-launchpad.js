@@ -24,7 +24,8 @@ export const VOICE_STUDIO_TILES = [
     id: 'dub',
     title: '视频配音',
     blurb: '转录翻译再配音',
-    status: 'soon',
+    status: 'live',
+    view: 'dub',
   },
   {
     id: 'audiobook',
@@ -59,6 +60,6 @@ export function defaultVoiceStudioView() {
 }
 
 export function resolveVoiceStudioView(requested) {
-  const allowed = new Set(['launchpad', 'gallery', 'clone'])
+  const allowed = new Set(['launchpad', 'gallery', 'clone', 'dub'])
   return allowed.has(requested) ? requested : 'launchpad'
 }

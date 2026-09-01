@@ -17,6 +17,7 @@ export function createMediaOrchestrator({
 } = {}) {
   async function execute(input = {}) {
     const job = createMediaJob({
+      id: input.jobId,
       ownerId: input.ownerId,
       sourceRef: input.sourceRef,
       sourceLanguage: input.sourceLanguage,
@@ -28,7 +29,11 @@ export function createMediaOrchestrator({
       ],
       ...(now ? { now } : {}),
     })
-    const emit = (type, data = {}) => onEvent?.({ type, job: job.snapshot(), ...data })
+    const emit = (type, data = {}) => {
+      const event = { type, job: job.snapshot(), ...data }
+      onEvent?.(event)
+      input.onEvent?.(event)
+    }
     const artifacts = {}
     const outputDir = clean(input.outputDir, 'media-output')
     try {
