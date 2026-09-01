@@ -110,6 +110,7 @@ Task 事件提供与 A2A 对齐的 `submitted`、
 | `qwen-audio-agent/media-audio-compose` | 将带时间轴的分段音频合成为完整配音音轨的 Adapter |
 | `qwen-audio-agent/media-orchestrator` | 编排媒体处理阶段，并只通过 Adapter 调用具体引擎 |
 | `qwen-audio-agent/media-routes` | GUI 使用的本地媒体资产上传、Job 创建与状态查询 HTTP 入口 |
+| `qwen-audio-agent/media-runtime` | 根据 Gateway 配置装配本地 STT、可插拔 TTS 与 LLM 翻译 Adapter |
 | `qwen-audio-agent/media-remux` | 将原视频与配音音轨安全合成为视频 artifact 的 Adapter |
 | `qwen-audio-agent/gateway-setup` | `gatewaySetupStatus`、`assertGatewaySetup` |
 | `qwen-audio-agent/gateway-process` | `GatewayProcess`、`createGatewayProcess`、`GATEWAY_READY_MESSAGE`、`DEFAULT_GATEWAY_ENTRY`、`validateGatewayOrigin`、`portInUse` |

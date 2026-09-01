@@ -64,6 +64,7 @@
     "./media-audio-compose": "./server/src/media/media-audio-compose.mjs",
     "./media-orchestrator": "./server/src/media/media-orchestrator.mjs",
     "./media-routes": "./server/src/app/media-routes.mjs",
+    "./media-runtime": "./server/src/media/media-runtime.mjs",
     "./media-remux": "./server/src/media/media-remux.mjs",
     "./settings": "./desktop/src/settings-store.mjs",
     "./skin-store": "./desktop/src/skin-store.mjs",

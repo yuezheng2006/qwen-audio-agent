@@ -1,4 +1,5 @@
 import { createMediaJob } from './media-job.mjs'
+import { mkdir } from 'node:fs/promises'
 
 function clean(value, fallback = '') {
   return String(value || '').trim() || fallback
@@ -37,6 +38,7 @@ export function createMediaOrchestrator({
     const artifacts = {}
     const outputDir = clean(input.outputDir, 'media-output')
     try {
+      await mkdir(outputDir, { recursive: true })
       job.startPhase('inspect')
       emit('media.phase.started', { phase: 'inspect' })
       artifacts.inspect = await requiredAdapter(adapters, 'ffmpeg').inspect(input.sourceRef)
@@ -79,6 +81,7 @@ export function createMediaOrchestrator({
       artifacts.synthesis = await requiredAdapter(adapters, 'synthesis').synthesizeSegments({
         segments: artifacts.translation.segments,
         voiceProfileId: input.voiceProfileId,
+        ownerId: input.ownerId,
         ...(input.synthesisOptions || {}),
       })
       job.completePhase('synthesize_segments', { artifactIds: [artifacts.synthesis.artifactId] })

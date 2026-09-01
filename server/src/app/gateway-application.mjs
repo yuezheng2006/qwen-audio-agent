@@ -85,6 +85,8 @@ import {
 } from '../client/client-event-router.mjs'
 import { registerVoiceRoutes } from './voice-routes.mjs'
 import { registerMediaRoutes } from './media-routes.mjs'
+import { createMediaOrchestrator } from '../media/media-orchestrator.mjs'
+import { createDefaultMediaRuntime } from '../media/media-runtime.mjs'
 import { createVoiceProfileStore } from '../voice/studio/profile-store.mjs'
 import { loadPresetCatalog } from '../voice/studio/preset-catalog.mjs'
 import { createVoiceCloneProviders } from '../voice/studio/providers/registry.mjs'
@@ -453,6 +455,11 @@ const voiceStudioService = config.voiceStudioEnabled === false
       restartGateway: () => restartGateway({ root: config.root }),
       defaultProvider: process.env.CASCADE_TTS_PROVIDER || 'dashscope',
     })
+const resolvedMediaOrchestrator = mediaOrchestrator || createMediaOrchestrator(
+  {
+    adapters: createDefaultMediaRuntime({ config, voiceStudioService }).adapters,
+  },
+)
 const app = express()
 // 资料条目对外的形状。fingerprint 是内部去重用的，不该出现在 API 里；
 // path 要给出来 —— 它就是交给后端 Agent 的那个地址，是这套机制的用处所在。
@@ -592,7 +599,7 @@ registerVoiceRoutes(app, {
 })
 
 registerMediaRoutes(app, {
-  mediaOrchestrator,
+  mediaOrchestrator: resolvedMediaOrchestrator,
   mediaDirectory: resolve(config.dataDirectory || config.configDirectory || process.cwd(), 'media-assets'),
 })
 
