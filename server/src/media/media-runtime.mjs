@@ -66,6 +66,9 @@ export function createDefaultMediaRuntime({
   voiceStudioService,
   runCommand,
   fetchImpl = globalThis.fetch,
+  createRecognizerImpl = createRecognizer,
+  createSynthesizerImpl = createSynthesizer,
+  streamChatImpl = streamChat,
 } = {}) {
   if (!config?.cascade) throw new TypeError('media runtime requires cascade config')
   const cascade = config.cascade
@@ -79,7 +82,7 @@ export function createDefaultMediaRuntime({
     provider: cascade.stt.provider,
     transcribe: async ({ audioRef, language }) => {
       const wav = await readFile(audioRef)
-      const recognizer = createRecognizer(cascade, { fetchImpl })
+      const recognizer = createRecognizerImpl(cascade, { fetchImpl })
       await recognizer.start()
       try {
         recognizer.sendAudio(extractPcm(wav))
@@ -99,7 +102,7 @@ export function createDefaultMediaRuntime({
     provider: 'cascade-llm',
     translate: async ({ segments, sourceLanguage, targetLanguage }) => {
       if (sourceLanguage === targetLanguage) return segments.map(segment => segment.text)
-      const response = await streamChat(cascade.llm, {
+      const response = await streamChatImpl(cascade.llm, {
         messages: [
           { role: 'system', content: '你是专业字幕翻译器。只输出 JSON 数组，每个元素是对应输入句子的译文，不要解释。' },
           { role: 'user', content: JSON.stringify({ sourceLanguage, targetLanguage, segments: segments.map(item => item.text) }) },
@@ -126,7 +129,7 @@ export function createDefaultMediaRuntime({
           voice,
         },
       }
-      const synthesizer = createSynthesizer(profileConfig, { onAudio: chunk => chunks.push(Buffer.from(chunk)) })
+      const synthesizer = createSynthesizerImpl(profileConfig, { onAudio: chunk => chunks.push(Buffer.from(chunk)) })
       await synthesizer.start()
       try {
         synthesizer.sendText(segment.targetText || segment.text)

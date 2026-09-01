@@ -82,6 +82,7 @@ export function createMediaOrchestrator({
         segments: artifacts.translation.segments,
         voiceProfileId: input.voiceProfileId,
         ownerId: input.ownerId,
+        outputDir,
         ...(input.synthesisOptions || {}),
       })
       job.completePhase('synthesize_segments', { artifactIds: [artifacts.synthesis.artifactId] })

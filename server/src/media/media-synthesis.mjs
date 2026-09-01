@@ -26,7 +26,7 @@ export function createSegmentSynthesisAdapter({
 } = {}) {
   if (typeof synthesize !== 'function') throw new TypeError('synthesize function is required')
   return {
-    async synthesizeSegments({ segments, voiceProfileId, ...options } = {}) {
+    async synthesizeSegments({ segments, voiceProfileId, outputDir = 'media-output', ...options } = {}) {
       const source = Array.isArray(segments) ? segments : []
       const profile = clean(voiceProfileId)
       if (!source.length) throw new TypeError('segments are required')
@@ -37,6 +37,7 @@ export function createSegmentSynthesisAdapter({
           segment: { ...segment },
           text: clean(segment?.targetText, segment?.text),
           voiceProfileId: profile,
+          outputRef: `${String(outputDir).replace(/\/+$/, '')}/synth-${index + 1}.wav`,
           ...options,
         })
         const audioRef = typeof result === 'string' ? result : result?.audioRef
