@@ -88,9 +88,14 @@ export function createDefaultMediaRuntime({
         recognizer.sendAudio(extractPcm(wav))
         const text = await recognizer.finish()
         const durationMs = wavPcmDurationMs(wav)
+        const detectedLanguage = clean(recognizer.lastResult?.language)
         return {
-          language: clean(language, 'auto'),
-          segments: [{ id: 'segment_1', startMs: 0, endMs: durationMs, text }],
+          language: language && language !== 'auto'
+            ? language
+            : clean(detectedLanguage, 'auto'),
+          segments: Array.isArray(recognizer.lastResult?.segments) && recognizer.lastResult.segments.length
+            ? recognizer.lastResult.segments
+            : [{ id: 'segment_1', startMs: 0, endMs: durationMs, text }],
         }
       } finally {
         recognizer.abort()
@@ -114,7 +119,7 @@ export function createDefaultMediaRuntime({
 
   const synthesis = createSegmentSynthesisAdapter({
     provider: cascade.tts.provider,
-    synthesize: async ({ segment, voiceProfileId, outputRef, ownerId = 'local' }) => {
+    synthesize: async ({ segment, voiceProfileId, outputRef, ownerId = 'local', ttsProvider, ttsVoice, ttsModel }) => {
       const profileResult = voiceStudioService?.list(ownerId)
       const profile = profileResult?.profiles?.find(item => item.id === voiceProfileId)
       const voice = clean(profile?.remote_voice_id || profile?.remoteVoiceId)
@@ -124,9 +129,9 @@ export function createDefaultMediaRuntime({
         ...cascade,
         tts: {
           ...cascade.tts,
-          provider: clean(profile.provider, cascade.tts.provider),
-          model: clean(profile.targetModel, cascade.tts.model),
-          voice,
+          provider: clean(ttsProvider, profile.provider || cascade.tts.provider),
+          model: clean(ttsModel, profile.targetModel || cascade.tts.model),
+          voice: clean(ttsVoice, voice),
         },
       }
       const synthesizer = createSynthesizerImpl(profileConfig, { onAudio: chunk => chunks.push(Buffer.from(chunk)) })

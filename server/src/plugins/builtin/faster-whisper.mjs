@@ -48,6 +48,7 @@ export class FasterWhisperRecognizer {
     this.controller = null
     this.aborted = false
     this.request = null
+    this.lastResult = null
   }
 
   start() {
@@ -89,6 +90,7 @@ export class FasterWhisperRecognizer {
         throw new Error(`faster-whisper 服务不可用（HTTP ${response.status}）`)
       }
       const payload = await response.json()
+      this.lastResult = payload
       const text = responseText(payload)
       this.onPartial?.(text)
       return text

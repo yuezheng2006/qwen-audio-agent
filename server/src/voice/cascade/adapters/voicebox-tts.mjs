@@ -69,13 +69,42 @@ export class VoiceBoxSynthesizer {
     if (contentType.includes('application/json')) {
       const payload = await response.json()
       const b64 = payload.audio || payload.pcm || payload.data
-      if (!b64) throw new Error('VoiceBox JSON response missing audio field')
-      const buffer = Buffer.from(b64, 'base64')
+      if (b64) {
+        const buffer = Buffer.from(b64, 'base64')
+        if (!this.aborted) this.onAudio?.(buffer)
+        return
+      }
+      const generationId = String(payload.id || '').trim()
+      if (!generationId) throw new Error('VoiceBox JSON response missing audio or generation id')
+      const completed = await this.waitForGeneration(generationId)
+      if (completed.status !== 'completed') {
+        throw new Error(`VoiceBox generation failed: ${completed.error || completed.status}`)
+      }
+      const audioResponse = await this.fetchImpl(`${this.baseUrl}/audio/${encodeURIComponent(generationId)}`, {
+        signal: AbortSignal.timeout(120_000),
+      })
+      if (!audioResponse.ok) throw new Error(`VoiceBox audio download failed (${audioResponse.status})`)
+      const buffer = Buffer.from(await audioResponse.arrayBuffer())
       if (!this.aborted) this.onAudio?.(buffer)
       return
     }
     const buffer = Buffer.from(await response.arrayBuffer())
     if (!this.aborted && buffer.length) this.onAudio?.(buffer)
+  }
+
+  async waitForGeneration(generationId, { timeoutMs = 120_000 } = {}) {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+      const response = await this.fetchImpl(`${this.baseUrl}/history/${encodeURIComponent(generationId)}`, {
+        signal: AbortSignal.timeout(5_000),
+      })
+      if (response.ok) {
+        const payload = await response.json()
+        if (['completed', 'failed', 'cancelled'].includes(payload.status)) return payload
+      }
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    throw new Error('VoiceBox generation timed out')
   }
 
   abort() {

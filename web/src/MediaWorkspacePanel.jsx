@@ -72,6 +72,7 @@ export default function MediaWorkspacePanel({ open }) {
         body: JSON.stringify({
           source_ref: upload.source_ref,
           target_language: targetLanguage,
+          source_language: 'auto',
           voice_profile_id: voiceProfileId,
         }),
       }))
