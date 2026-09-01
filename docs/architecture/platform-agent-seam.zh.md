@@ -229,6 +229,10 @@ Gateway 发来的 WAV bytes，并返回文本与时间片段；模型、设备�
 控制。Gateway 通过 `CASCADE_STT_PROVIDER=faster-whisper` 与 `CASCADE_STT_URL`
 接入，不在 Agent Core 中直接导入 Python、Torch 或 Whisper。
 
+若机器已经安装 `whisper.cpp`，也可以使用零 Python 依赖的
+`scripts/whisper-cpp-sidecar.py`，设置 `WHISPER_CPP_MODEL` 后复用同一
+`/transcribe` 协议。
+
 ## 版本和兼容
 
 - 复用现有 Gateway Client Protocol 6.0，不新建第二条客户端 WebSocket。
