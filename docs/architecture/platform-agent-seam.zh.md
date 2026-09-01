@@ -222,6 +222,13 @@ Agent 只能通过 profile id 使用声音；不能保存或拼接供应商 Voic
 
 Voice Studio 是 Platform 的一个工作区；聊天首页、任务中心和记忆属于 Agent 客户端层。
 
+### Local STT sidecar
+
+`scripts/faster-whisper-sidecar.py` 是可替换的本地 STT sidecar 示例。它只接受
+Gateway 发来的 WAV bytes，并返回文本与时间片段；模型、设备和计算类型由环境变量
+控制。Gateway 通过 `CASCADE_STT_PROVIDER=faster-whisper` 与 `CASCADE_STT_URL`
+接入，不在 Agent Core 中直接导入 Python、Torch 或 Whisper。
+
 ## 版本和兼容
 
 - 复用现有 Gateway Client Protocol 6.0，不新建第二条客户端 WebSocket。
