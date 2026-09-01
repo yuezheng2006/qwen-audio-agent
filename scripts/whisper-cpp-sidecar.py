@@ -59,7 +59,8 @@ class Handler(BaseHTTPRequestHandler):
                     "end": item.get("offsets", {}).get("to", 0) / 1000,
                     "text": item.get("text", "").strip(),
                 } for index, item in enumerate(payload.get("transcription", []), start=1)]
-                self.send_json(200, {"text": "".join(row["text"] for row in rows), "language": language, "segments": rows})
+                detected = payload.get("result", {}).get("language") or language
+                self.send_json(200, {"text": "".join(row["text"] for row in rows), "language": detected, "segments": rows})
         except Exception as error:
             self.send_json(500, {"error": str(error)[:500]})
 
