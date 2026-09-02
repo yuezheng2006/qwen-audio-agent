@@ -189,6 +189,30 @@ registerCascadeTtsPlugin({
 })
 
 registerCascadeTtsPlugin({
+  id: 'macos-say',
+  platform: {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize'],
+    runtime: 'local-native',
+    dataBoundary: 'local',
+  },
+  aliases: ['system', 'macos', 'macos-system'],
+  preserve: false,
+  cascadeLabel: 'Cascade（本机系统语音）',
+  envKeys: ['MACOS_SAY_VOICE'],
+  resolveConfig(env, { sharedKey }) {
+    return {
+      model: 'macos-say',
+      voice: env.CASCADE_TTS_VOICE_ID || env.CASCADE_TTS_VOICE || env.MACOS_SAY_VOICE || 'Ting-Ting',
+      apiKey: env.CASCADE_TTS_API_KEY || sharedKey,
+    }
+  },
+  displayName(id) {
+    return `系统语音 ${id || 'Ting-Ting'}`
+  },
+})
+
+registerCascadeTtsPlugin({
   id: 'fish',
   platform: {
     platformApiVersion: '0.1',

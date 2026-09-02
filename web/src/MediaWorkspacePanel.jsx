@@ -22,6 +22,7 @@ export default function MediaWorkspacePanel({ open }) {
   const [file, setFile] = useState(null)
   const [sourceLanguage, setSourceLanguage] = useState('auto')
   const [targetLanguage, setTargetLanguage] = useState('zh-CN')
+  const [ttsProvider, setTtsProvider] = useState('macos-say')
   const [voiceProfileId, setVoiceProfileId] = useState('')
   const [job, setJob] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -75,6 +76,10 @@ export default function MediaWorkspacePanel({ open }) {
           target_language: targetLanguage,
           source_language: sourceLanguage,
           voice_profile_id: voiceProfileId,
+          synthesis_options: {
+            ttsProvider,
+            ...(ttsProvider === 'macos-say' ? { ttsVoice: 'Ting-Ting' } : {}),
+          },
         }),
       }))
       setJob(result.job)
@@ -112,6 +117,13 @@ export default function MediaWorkspacePanel({ open }) {
             <select value={voiceProfileId} onChange={event => setVoiceProfileId(event.target.value)}>
               {!profiles.length && <option value="">暂无可用声音</option>}
               {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
+            </select>
+          </label>
+          <label className="voice-field"><span>配音引擎</span>
+            <select value={ttsProvider} onChange={event => setTtsProvider(event.target.value)}>
+              <option value="macos-say">本机系统语音（可立即试听）</option>
+              <option value="voicebox">VoiceBox（本地音色）</option>
+              <option value="dashscope">Qwen 云端语音</option>
             </select>
           </label>
         </div>

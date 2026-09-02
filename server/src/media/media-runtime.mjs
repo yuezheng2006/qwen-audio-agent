@@ -134,7 +134,10 @@ export function createDefaultMediaRuntime({
           voice: clean(ttsVoice, voice),
         },
       }
-      const synthesizer = createSynthesizerImpl(profileConfig, { onAudio: chunk => chunks.push(Buffer.from(chunk)) })
+      const synthesizer = createSynthesizerImpl(profileConfig, {
+        onAudio: chunk => chunks.push(Buffer.from(chunk)),
+        runCommand: commandRunner,
+      })
       await synthesizer.start()
       try {
         synthesizer.sendText(segment.targetText || segment.text)

@@ -82,7 +82,13 @@ export function registerMediaRoutes(app, {
       ...(req.body?.transcription_options ? { transcriptionOptions: req.body.transcription_options } : {}),
       ...(req.body?.translation_options ? { translationOptions: req.body.translation_options } : {}),
       ...(req.body?.synthesis_options ? { synthesisOptions: req.body.synthesis_options } : {}),
-      onEvent: event => jobs.set(jobId, event.job),
+      onEvent: event => {
+        jobs.set(jobId, event.job)
+        const outputRef = clean(event.artifact?.outputRef)
+        if (event.type === 'media.phase.completed' && event.phase === 'remux' && outputRef) {
+          outputs.set(jobId, outputRef)
+        }
+      },
     }).then(result => {
       jobs.set(jobId, result.job)
       const outputRef = clean(result.artifacts?.output?.outputRef)

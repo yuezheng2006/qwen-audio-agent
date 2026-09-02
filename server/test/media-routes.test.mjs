@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import test from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -67,4 +67,37 @@ test('media routes create and expose asynchronous job snapshots', async () => {
   const getResponse = response()
   await app.routes.get('GET /api/media/jobs/:id')({ params: { id: jobId } }, getResponse)
   assert.equal(getResponse.payload.job.status, 'completed')
+})
+
+test('media routes expose the completed output from the remux phase', async () => {
+  const app = fakeApp()
+  const outputPath = '/tmp/qwaudio-media-route-output.wav'
+  await writeFile(outputPath, Buffer.from('audio'))
+  registerMediaRoutes(app, {
+    mediaDirectory: '/tmp/qwaudio-media-route-assets',
+    mediaOrchestrator: {
+      execute: async input => {
+        input.onEvent?.({
+          type: 'media.phase.completed',
+          phase: 'remux',
+          artifact: { outputRef: outputPath },
+          job: { id: input.jobId, status: 'completed' },
+        })
+        return { job: { id: input.jobId, status: 'completed' }, artifacts: { output: { outputRef: outputPath } } }
+      },
+    },
+  })
+  const post = app.routes.get('POST /api/media/jobs')
+  const postResponse = response()
+  postResponse.sendFile = file => { postResponse.file = file; return postResponse }
+  await post({
+    body: { source_ref: 'voice.wav', target_language: 'zh', voice_profile_id: 'voice-1' },
+    identity: { ownerId: 'owner-1' },
+  }, postResponse)
+  await new Promise(resolve => setImmediate(resolve))
+  const output = response()
+  output.sendFile = file => { output.file = file; return output }
+  await app.routes.get('GET /api/media/jobs/:id/output')({ params: { id: postResponse.payload.job.id } }, output)
+  assert.equal(output.statusCode, 200)
+  assert.equal(output.file, outputPath)
 })

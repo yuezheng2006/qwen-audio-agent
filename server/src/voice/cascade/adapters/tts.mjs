@@ -6,6 +6,7 @@ import { createFishAudioSynthesizer } from './fish-tts.mjs'
 import { createListenHubSynthesizer } from './listenhub-tts.mjs'
 import { createMinimaxSynthesizer } from './minimax-tts.mjs'
 import { createVoiceBoxSynthesizer } from './voicebox-tts.mjs'
+import { createMacOsSaySynthesizer } from './macos-say-tts.mjs'
 
 // Streaming TTS adapter contract: one synthesizer per response.
 //
@@ -107,6 +108,9 @@ export const TTS_PROVIDERS = {
   ),
   minimax: (cascadeConfig, handlers) => (
     createMinimaxSynthesizer(cascadeConfig, handlers)
+  ),
+  'macos-say': (cascadeConfig, handlers) => (
+    createMacOsSaySynthesizer(cascadeConfig, handlers)
   ),
 }
 

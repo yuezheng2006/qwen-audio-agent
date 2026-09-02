@@ -5,12 +5,13 @@ import {
   listTtsProviders,
 } from '../src/voice/cascade/adapters/tts.mjs'
 import { VoiceBoxSynthesizer } from '../src/voice/cascade/adapters/voicebox-tts.mjs'
+import { MacOsSaySynthesizer } from '../src/voice/cascade/adapters/macos-say-tts.mjs'
 import { getCascadeTtsPlatformMetadata } from '../../shared/cascade-tts-plugins.mjs'
 
 test('tts registry lists dashscope voicebox fish listenhub minimax', () => {
   assert.deepEqual(
     listTtsProviders().sort(),
-    ['dashscope', 'fish', 'listenhub', 'minimax', 'voicebox'],
+    ['dashscope', 'fish', 'listenhub', 'macos-say', 'minimax', 'voicebox'],
   )
 })
 
@@ -59,6 +60,25 @@ test('voicebox synthesizer posts text and emits pcm', async () => {
   assert.ok(calls.some(call => call.url.includes('/speak')))
   assert.equal(audioChunks.length, 1)
   assert.equal(audioChunks[0].length, 4)
+})
+
+test('macOS system TTS adapter converts generated AIFF to PCM through injected commands', async () => {
+  const calls = []
+  const chunks = []
+  const synthesizer = new MacOsSaySynthesizer({ tts: { voice: 'Ting-Ting', sampleRate: 24000 } }, {
+    onAudio: chunk => chunks.push(chunk),
+    runCommand: async (command, args) => {
+      calls.push({ command, args })
+      if (command === '/usr/bin/say') return { stdout: '' }
+      return { stdout: Buffer.from([1, 2, 3, 4]) }
+    },
+  })
+  await synthesizer.start()
+  synthesizer.sendText('你好。')
+  await synthesizer.finish()
+  assert.equal(calls[0].command, '/usr/bin/say')
+  assert.equal(calls[1].args.at(-1), 'pipe:1')
+  assert.deepEqual(chunks, [Buffer.from([1, 2, 3, 4])])
 })
 
 test('voicebox synthesizer follows asynchronous generation to audio', async () => {
