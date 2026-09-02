@@ -5,6 +5,15 @@
 // side-effect free. A provider may be backed by VoiceMem or another local
 // retrieval engine without changing the Cascade session.
 
+import { createVoiceMemTurnContextRetriever } from './adapters/voicemem.mjs'
+
+export function createTurnContextRetriever(cascadeConfig, options) {
+  const provider = String(cascadeConfig?.turnContext?.provider || 'none').trim().toLowerCase()
+  if (provider === 'none' || !provider) return createNoopTurnContextRetriever()
+  if (provider === 'voicemem') return createVoiceMemTurnContextRetriever(cascadeConfig, options)
+  throw new Error(`不支持的当前轮次记忆 provider：${provider}`)
+}
+
 export function createNoopTurnContextRetriever() {
   return {
     describe: () => ({

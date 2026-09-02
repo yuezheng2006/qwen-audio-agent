@@ -287,6 +287,14 @@ export function resolveCascadeConfig(env = process.env) {
         { min: 50, max: 4000 },
       ),
     },
+    turnContext: {
+      provider: (env.CASCADE_TURN_CONTEXT_PROVIDER || 'none').toLowerCase(),
+      url: (env.CASCADE_TURN_CONTEXT_URL || '').replace(/\/+$/, ''),
+      apiKey: env.CASCADE_TURN_CONTEXT_API_KEY || '',
+      minChars: numberSetting(env.CASCADE_TURN_CONTEXT_MIN_CHARS, 6, { min: 1, max: 200 }),
+      requestTimeoutMs: numberSetting(env.CASCADE_TURN_CONTEXT_REQUEST_TIMEOUT_MS, 1000, { min: 50, max: 10000 }),
+      deadlineMs: numberSetting(env.CASCADE_TURN_CONTEXT_DEADLINE_MS, 250, { min: 0, max: 2000 }),
+    },
     tts: resolveCascadeTtsConfig(env, sharedKey),
     vad: {
       threshold: numberSetting(
@@ -360,6 +368,14 @@ export const config = {
       model: process.env.CASCADE_LLM_MODEL || 'qwen-flash',
       apiKey: process.env.CASCADE_LLM_API_KEY || realtimeFrontend.dashscopeApiKey,
       baseUrl: (process.env.CASCADE_LLM_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1').replace(/\/+$/, ''),
+    },
+    turnContext: {
+      provider: (process.env.CASCADE_TURN_CONTEXT_PROVIDER || 'none').toLowerCase(),
+      url: (process.env.CASCADE_TURN_CONTEXT_URL || '').replace(/\/+$/, ''),
+      apiKey: process.env.CASCADE_TURN_CONTEXT_API_KEY || '',
+      minChars: numberSetting(process.env.CASCADE_TURN_CONTEXT_MIN_CHARS, 6, { min: 1, max: 200 }),
+      requestTimeoutMs: numberSetting(process.env.CASCADE_TURN_CONTEXT_REQUEST_TIMEOUT_MS, 1000, { min: 50, max: 10000 }),
+      deadlineMs: numberSetting(process.env.CASCADE_TURN_CONTEXT_DEADLINE_MS, 250, { min: 0, max: 2000 }),
     },
     tts: cascadeTtsConfig,
   },

@@ -98,3 +98,20 @@ test('cascade service binds loopback with an ephemeral port by default', () => {
     3202,
   )
 })
+
+test('turn context stays disabled unless a provider is explicitly configured', () => {
+  const defaults = resolveCascadeConfig({})
+  assert.equal(defaults.turnContext.provider, 'none')
+  const custom = resolveCascadeConfig({
+    CASCADE_TURN_CONTEXT_PROVIDER: 'VoiceMem',
+    CASCADE_TURN_CONTEXT_URL: 'http://127.0.0.1:8765/',
+    CASCADE_TURN_CONTEXT_API_KEY: 'turn-key',
+    CASCADE_TURN_CONTEXT_MIN_CHARS: '10',
+    CASCADE_TURN_CONTEXT_DEADLINE_MS: '180',
+  })
+  assert.equal(custom.turnContext.provider, 'voicemem')
+  assert.equal(custom.turnContext.url, 'http://127.0.0.1:8765')
+  assert.equal(custom.turnContext.apiKey, 'turn-key')
+  assert.equal(custom.turnContext.minChars, 10)
+  assert.equal(custom.turnContext.deadlineMs, 180)
+})

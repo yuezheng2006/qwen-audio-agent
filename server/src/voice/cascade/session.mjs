@@ -12,7 +12,7 @@ import { createRecognizer } from './adapters/stt.mjs'
 import { createSynthesizer } from './adapters/tts.mjs'
 import { streamChat } from './adapters/llm.mjs'
 import {
-  createNoopTurnContextRetriever,
+  createTurnContextRetriever,
   renderTurnContext,
 } from './turn-context.mjs'
 
@@ -36,7 +36,7 @@ export class CascadeSession {
       createRecognizer,
       createSynthesizer,
       streamChat,
-      createTurnContextRetriever: createNoopTurnContextRetriever,
+      createTurnContextRetriever,
       ...adapters,
     }
     this.turnContextRetriever = this.adapters.createTurnContextRetriever(this.config, { log })

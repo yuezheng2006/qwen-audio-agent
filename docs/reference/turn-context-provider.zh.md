@@ -39,3 +39,21 @@ Cascade 通过 `createTurnContextRetriever(config, { log })` 注入 provider。p
 ```
 
 结果会作为本次响应的独立 context message 传给 Agent，不会写入 `session.instructions`，也不会通过 `MemoryProvider.list()` 注入。VoiceMem 可以作为该合同的一个插件实现，但核心代码不依赖 VoiceMem 的内部存储或模型。
+
+## VoiceMem loopback bridge
+
+启用内置适配器：
+
+```bash
+CASCADE_TURN_CONTEXT_PROVIDER=voicemem
+CASCADE_TURN_CONTEXT_URL=http://127.0.0.1:8765 \
+  npm run gateway:start
+```
+
+适配器向 `${CASCADE_TURN_CONTEXT_URL}/v1/turn/partial` 发送：
+
+```json
+{"session_id":"...","turn_id":"...","text":"用户当前的 partial transcript"}
+```
+
+bridge 应返回 JSON，支持 `facts`、`relationship`、`affect`，也兼容 VoiceMem 风格的 `left_hits`、`rightbrain`、`emotion` 等字段。该 HTTP bridge 是跨平台边界；VoiceMem 的 Python runtime 可以在本机作为 bridge 运行，Mac、Windows、Linux、Android 或 iOS 客户端不需要直接依赖 Python。
