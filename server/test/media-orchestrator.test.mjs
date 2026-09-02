@@ -57,3 +57,25 @@ test('media orchestrator records the failed phase and exposes a resumable job', 
   })
   assert.equal(failure.job.phases[0].error, 'ffprobe unavailable')
 })
+
+test('media orchestrator returns an audio output without calling video remux', async () => {
+  let remuxCalled = false
+  const result = await createMediaOrchestrator({
+    adapters: {
+      ffmpeg: {
+        inspect: async () => ({ artifactId: 'info', streams: [{ codec_type: 'audio' }], format: { duration: '1.2' } }),
+        extractAudio: async () => ({ artifactId: 'audio', outputRef: 'audio.wav' }),
+      },
+      transcription: { transcribeAligned: async () => ({ artifactId: 'transcript', language: 'zh', segments: [{ id: 's1', startMs: 0, endMs: 1000, text: '你好' }] }) },
+      translation: { translateSegments: async input => ({ artifactId: 'translation', segments: [{ ...input.segments[0], targetText: '你好' }] }) },
+      synthesis: { synthesizeSegments: async () => ({ artifactId: 'synthesis', segments: [{ id: 's1', startMs: 0, endMs: 1000, targetText: '你好', audioRef: 'dub.wav' }] }) },
+      timing: { fitSegment: async input => ({ artifactId: 'timed_s1', outputRef: input.outputRef, startMs: 0, endMs: 1000 }) },
+      audioCompose: { compose: async input => ({ artifactId: 'timeline', outputRef: input.outputRef }) },
+      remux: { remux: async () => { remuxCalled = true; throw new Error('must not remux audio') } },
+    },
+  }).execute({ ownerId: 'owner-1', sourceRef: 'voice.wav', sourceLanguage: 'zh', targetLanguage: 'zh', outputDir: '/tmp/media-job-audio' })
+  assert.equal(result.job.status, 'completed')
+  assert.equal(result.artifacts.output.kind, 'audio.dubbed')
+  assert.equal(result.artifacts.output.outputRef, '/tmp/media-job-audio/dubbed.wav')
+  assert.equal(remuxCalled, false)
+})

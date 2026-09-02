@@ -1904,6 +1904,9 @@ header select.frontend-provider option {
 .media-phase.running i { background: #a98dff; box-shadow: 0 0 10px #a98dff; }
 .media-phase.failed { color: #ff9ba3; }
 .media-phase.failed i { background: #ff6f7d; }
+.media-output-preview { display: grid; gap: 12px; margin-top: 18px; }
+.media-output-preview audio, .media-output-preview video { width: 100%; max-height: 360px; border-radius: 12px; }
+.media-output-preview a { color: var(--accent, #a993ff); font-size: 13px; }
 .voice-recorder {
   display: grid;
   gap: 14px;

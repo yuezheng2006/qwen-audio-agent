@@ -20,6 +20,7 @@ function readJson(response) {
 export default function MediaWorkspacePanel({ open }) {
   const [profiles, setProfiles] = useState([])
   const [file, setFile] = useState(null)
+  const [sourceLanguage, setSourceLanguage] = useState('auto')
   const [targetLanguage, setTargetLanguage] = useState('zh-CN')
   const [voiceProfileId, setVoiceProfileId] = useState('')
   const [job, setJob] = useState(null)
@@ -72,7 +73,7 @@ export default function MediaWorkspacePanel({ open }) {
         body: JSON.stringify({
           source_ref: upload.source_ref,
           target_language: targetLanguage,
-          source_language: 'auto',
+          source_language: sourceLanguage,
           voice_profile_id: voiceProfileId,
         }),
       }))
@@ -97,6 +98,11 @@ export default function MediaWorkspacePanel({ open }) {
           <small>文件在本机处理；浏览器会先上传到本机 Gateway</small>
         </label>
         <div className="media-job-fields">
+          <label className="voice-field"><span>原始语言</span>
+            <select value={sourceLanguage} onChange={event => setSourceLanguage(event.target.value)}>
+              <option value="auto">自动识别</option><option value="zh-CN">中文</option><option value="en">English</option><option value="ja">日本語</option>
+            </select>
+          </label>
           <label className="voice-field"><span>目标语言</span>
             <select value={targetLanguage} onChange={event => setTargetLanguage(event.target.value)}>
               <option value="zh-CN">中文</option><option value="en">English</option><option value="ja">日本語</option>
@@ -119,6 +125,12 @@ export default function MediaWorkspacePanel({ open }) {
         <div className="media-phase-list">
           {(job.phases || []).map(phase => <div key={phase.name} className={`media-phase ${phase.status}`}><i />{PHASE_LABELS[phase.name] || phase.name}<span>{phase.status === 'completed' ? '完成' : phase.status === 'running' ? '进行中' : phase.status === 'failed' ? '失败' : '等待'}</span></div>)}
         </div>
+        {job.status === 'completed' && <div className="media-output-preview">
+          {file?.type.startsWith('video/')
+            ? <video controls src={`api/media/jobs/${encodeURIComponent(job.id)}/output`} />
+            : <audio controls src={`api/media/jobs/${encodeURIComponent(job.id)}/output`} />}
+          <a href={`api/media/jobs/${encodeURIComponent(job.id)}/output`} download>下载配音结果</a>
+        </div>}
       </section>}
     </div>
   )

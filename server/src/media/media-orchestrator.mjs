@@ -111,12 +111,16 @@ export function createMediaOrchestrator({
         outputRef: `${outputDir}/dubbed.wav`,
         durationMs: Number(artifacts.inspect.format?.duration) * 1_000,
       })
-      artifacts.output = await requiredAdapter(adapters, 'remux').remux({
-        videoRef: input.sourceRef,
-        audioRef: artifacts.audioTimeline.outputRef,
-        outputRef: `${outputDir}/dubbed.mp4`,
-        durationMs: Number(artifacts.inspect.format?.duration) * 1_000,
-      })
+      const streams = Array.isArray(artifacts.inspect.streams) ? artifacts.inspect.streams : []
+      const hasVideo = streams.length === 0 || streams.some(stream => stream.codec_type === 'video' || stream.type === 'video')
+      artifacts.output = hasVideo
+        ? await requiredAdapter(adapters, 'remux').remux({
+          videoRef: input.sourceRef,
+          audioRef: artifacts.audioTimeline.outputRef,
+          outputRef: `${outputDir}/dubbed.mp4`,
+          durationMs: Number(artifacts.inspect.format?.duration) * 1_000,
+        })
+        : { artifactId: 'audio_output', kind: 'audio.dubbed', outputRef: artifacts.audioTimeline.outputRef }
       job.completePhase('remux', { artifactIds: [artifacts.output.artifactId] })
       emit('media.phase.completed', { phase: 'remux', artifact: artifacts.output })
       return { job: job.snapshot(), artifacts }
