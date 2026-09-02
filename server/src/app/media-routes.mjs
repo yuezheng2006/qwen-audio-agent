@@ -83,15 +83,15 @@ export function registerMediaRoutes(app, {
       ...(req.body?.translation_options ? { translationOptions: req.body.translation_options } : {}),
       ...(req.body?.synthesis_options ? { synthesisOptions: req.body.synthesis_options } : {}),
       onEvent: event => {
-        jobs.set(jobId, event.job)
         const outputRef = clean(event.artifact?.outputRef)
+        jobs.set(jobId, outputRef ? { ...event.job, outputRef } : event.job)
         if (event.type === 'media.phase.completed' && event.phase === 'remux' && outputRef) {
           outputs.set(jobId, outputRef)
         }
       },
     }).then(result => {
-      jobs.set(jobId, result.job)
       const outputRef = clean(result.artifacts?.output?.outputRef)
+      jobs.set(jobId, outputRef ? { ...result.job, outputRef } : result.job)
       if (outputRef) outputs.set(jobId, outputRef)
     }).catch(error => {
       if (error.job) jobs.set(jobId, error.job)
@@ -107,7 +107,8 @@ export function registerMediaRoutes(app, {
   })
 
   app.get('/api/media/jobs/:id/output', async (req, res) => {
-    const outputRef = outputs.get(clean(req.params.id))
+    const id = clean(req.params.id)
+    const outputRef = outputs.get(id) || clean(jobs.get(id)?.outputRef)
     if (!outputRef) return res.status(404).json({ error: '媒体输出尚未生成。', error_code: 'media_output_not_found' })
     try {
       const details = await stat(outputRef)
