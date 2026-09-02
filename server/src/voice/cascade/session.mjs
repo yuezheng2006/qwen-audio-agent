@@ -11,6 +11,10 @@ import {
 import { createRecognizer } from './adapters/stt.mjs'
 import { createSynthesizer } from './adapters/tts.mjs'
 import { streamChat } from './adapters/llm.mjs'
+import {
+  createNoopTurnContextRetriever,
+  renderTurnContext,
+} from './turn-context.mjs'
 
 const MAX_HISTORY_MESSAGES = 60
 const PREROLL_MS = 400
@@ -32,9 +36,11 @@ export class CascadeSession {
       createRecognizer,
       createSynthesizer,
       streamChat,
+      createTurnContextRetriever: createNoopTurnContextRetriever,
       ...adapters,
     }
-    this.session = { instructions: '', tools: [] }
+    this.turnContextRetriever = this.adapters.createTurnContextRetriever(this.config, { log })
+    this.session = { id: id('sess'), instructions: '', tools: [] }
     this.history = []
     this.activeResponse = null
     this.responseQueue = []
@@ -58,7 +64,7 @@ export class CascadeSession {
     })
     ws.on('message', raw => this.handleMessage(raw))
     ws.on('close', () => this.dispose())
-    this.emit({ type: 'session.created', session: { id: id('sess') } })
+    this.emit({ type: 'session.created', session: { id: this.session.id } })
   }
 
   isAssistantBusy() {
@@ -90,6 +96,7 @@ export class CascadeSession {
 
   dispose() {
     this.cancelActiveResponse('session_closed')
+    this.utterance?.turnContext?.cancel?.()
     this.utterance?.recognizer?.abort()
     this.utterance = null
     this.bargeIn.reset()
@@ -185,10 +192,19 @@ export class CascadeSession {
       sentBytes: 0,
       recognizer: null,
       recognizerReady: false,
+      turnContext: null,
     }
     this.preroll = []
     this.prerollMs = 0
     this.utterance = utterance
+    try {
+      utterance.turnContext = this.turnContextRetriever?.openTurn?.({
+        sessionId: this.session.id,
+        turnId: itemId,
+      }) || null
+    } catch (error) {
+      this.log(`当前轮次记忆初始化失败：${error.message}`)
+    }
     this.emit({ type: 'input_audio_buffer.speech_started', item_id: itemId })
     const recognizer = this.adapters.createRecognizer(this.config, {
       onPartial: text => {
@@ -199,6 +215,11 @@ export class CascadeSession {
           text,
         })
         this.bargeIn.notePartial(text)
+        try {
+          utterance.turnContext?.partial?.({ text, atMs: Date.now() })
+        } catch (error) {
+          this.log(`当前轮次记忆预取失败：${error.message}`)
+        }
       },
     })
     utterance.recognizer = recognizer
@@ -229,6 +250,7 @@ export class CascadeSession {
       this.feedRecognizerFor(utterance)
       transcript = await utterance.recognizer.finish()
     } catch (error) {
+      utterance.turnContext?.cancel?.()
       this.log(`级联 STT 失败：${error.message}`)
       this.bargeIn.reset()
       this.emit({
@@ -244,6 +266,7 @@ export class CascadeSession {
     }
     const decision = this.bargeIn.decideOnSpeechEnd(transcript)
     if (decision.action === 'suppress') {
+      utterance.turnContext?.cancel?.()
       // Backchannel / noise while assistant spoke — keep playback going.
       this.emit({
         type: 'input_audio_buffer.speech_stopped',
@@ -253,6 +276,7 @@ export class CascadeSession {
       return
     }
     if (!transcript) {
+      utterance.turnContext?.cancel?.()
       this.bargeIn.reset()
       this.emit({
         type: 'input_audio_buffer.speech_stopped',
@@ -280,10 +304,19 @@ export class CascadeSession {
       item_id: itemId,
       transcript,
     })
+    let turnContext = null
+    try {
+      turnContext = await utterance.turnContext?.final?.({
+        transcript,
+        deadlineMs: 250,
+      }) || null
+    } catch (error) {
+      this.log(`当前轮次记忆检索失败：${error.message}`)
+    }
     this.pushHistory({ role: 'user', content: userContent })
     // Absorb trailing "hello hello" / room echo right after the user turn.
     this.bargeHoldUntil = Date.now() + POST_COMMIT_BARGE_HOLD_MS
-    this.enqueueResponse({})
+    this.enqueueResponse({}, { turnContext })
   }
 
   feedRecognizerFor(utterance) {
@@ -296,14 +329,15 @@ export class CascadeSession {
 
   // ---- Response path ----------------------------------------------------
 
-  enqueueResponse(payload) {
-    this.responseQueue.push(payload)
+  enqueueResponse(payload, { turnContext = null } = {}) {
+    this.responseQueue.push({ payload, turnContext })
     this.drainResponses()
   }
 
   async drainResponses() {
     if (this.activeResponse || !this.responseQueue.length) return
-    const payload = this.responseQueue.shift()
+    const queued = this.responseQueue.shift()
+    const payload = queued.payload
     this.cancelScope.newResponse()
     const response = {
       id: id('resp'),
@@ -314,6 +348,7 @@ export class CascadeSession {
       ttsChain: Promise.resolve(),
       done: false,
       spokenSoFar: '',
+      turnContext: queued.turnContext,
       timing: {
         llmFirstToken: false,
         ttsFirstByte: false,
@@ -436,14 +471,17 @@ export class CascadeSession {
     }
   }
 
-  buildMessages(payload) {
+  buildMessages(payload, turnContext = null) {
     const sections = [this.session.instructions || '']
     if (payload.instructions) sections.push(payload.instructions)
     const system = sections.filter(Boolean).join('\n\n')
-    return [
+    const messages = [
       ...(system ? [{ role: 'system', content: system }] : []),
       ...this.history,
     ]
+    const renderedTurnContext = renderTurnContext(turnContext)
+    if (renderedTurnContext) messages.push({ role: 'system', content: renderedTurnContext })
+    return messages
   }
 
   async generate(response, payload, { audio }) {
@@ -497,7 +535,7 @@ export class CascadeSession {
     }
     const sentences = new SentenceStream({ onSentence: speakSentence })
     const result = await this.adapters.streamChat(this.config.llm, {
-      messages: this.buildMessages(payload),
+      messages: this.buildMessages(payload, response.turnContext),
       tools: useTools ? this.session.tools : [],
       signal: response.abort.signal,
       onTextDelta: text => {

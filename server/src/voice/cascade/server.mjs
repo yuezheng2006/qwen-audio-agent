@@ -16,13 +16,14 @@ export function cascadeRealtimeUrl() {
 export function startCascadeServer({
   cascadeConfig = config.cascade,
   log = message => process.stderr.write(`${message}\n`),
+  adapters = {},
 } = {}) {
   if (activeUrl) return Promise.resolve(activeUrl)
   return new Promise((resolve, reject) => {
     const server = createServer()
     const wss = new WebSocketServer({ server, maxPayload: 2 * 1024 * 1024 })
     wss.on('connection', ws => {
-      const session = new CascadeSession(ws, { cascadeConfig, log })
+      const session = new CascadeSession(ws, { cascadeConfig, log, adapters })
       ws.on('error', () => session.dispose())
     })
     const host = cascadeConfig.host || '127.0.0.1'
