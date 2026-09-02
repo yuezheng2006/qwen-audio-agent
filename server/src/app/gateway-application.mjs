@@ -601,6 +601,7 @@ registerVoiceRoutes(app, {
 registerMediaRoutes(app, {
   mediaOrchestrator: resolvedMediaOrchestrator,
   mediaDirectory: resolve(config.dataDirectory || config.configDirectory || process.cwd(), 'media-assets'),
+  outputDirectory: resolve(config.dataDirectory || config.configDirectory || process.cwd(), 'media-output'),
 })
 
 let realtimeGateway

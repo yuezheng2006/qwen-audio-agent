@@ -20,9 +20,11 @@ function unavailable(res) {
 export function registerMediaRoutes(app, {
   mediaOrchestrator = null,
   mediaDirectory,
+  outputDirectory,
   maxUploadBytes = 256 * 1024 * 1024,
 } = {}) {
   const root = resolve(mediaDirectory || resolve(process.cwd(), 'media-assets'))
+  const outputRoot = resolve(outputDirectory || resolve(process.cwd(), 'media-output'))
   const jobs = new Map()
   const outputs = new Map()
 
@@ -79,6 +81,7 @@ export function registerMediaRoutes(app, {
       sourceLanguage: clean(req.body?.source_language || req.body?.sourceLanguage, 'auto'),
       targetLanguage,
       voiceProfileId,
+      outputDir: outputRoot,
       ...(req.body?.transcription_options ? { transcriptionOptions: req.body.transcription_options } : {}),
       ...(req.body?.translation_options ? { translationOptions: req.body.translation_options } : {}),
       ...(req.body?.synthesis_options ? { synthesisOptions: req.body.synthesis_options } : {}),

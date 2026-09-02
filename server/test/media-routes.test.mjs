@@ -75,8 +75,10 @@ test('media routes expose the completed output from the remux phase', async () =
   await writeFile(outputPath, Buffer.from('audio'))
   registerMediaRoutes(app, {
     mediaDirectory: '/tmp/qwaudio-media-route-assets',
+    outputDirectory: '/tmp/qwaudio-media-route-output',
     mediaOrchestrator: {
       execute: async input => {
+        assert.equal(input.outputDir, '/tmp/qwaudio-media-route-output')
         input.onEvent?.({
           type: 'media.phase.completed',
           phase: 'remux',
