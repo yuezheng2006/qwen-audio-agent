@@ -26,17 +26,59 @@ class TurnStream:
 
 
 app = FastAPI(title="qwen-audio-agent VoiceMem bridge")
-voice_mem = VoiceMem(
-    mode=os.getenv("VOICEMEM_MODE", "normal"),
-    openai_key=os.getenv("OPENAI_API_KEY", ""),
-    top_k=int(os.getenv("VOICEMEM_TOP_K", "5")),
+llm_key = (
+    os.getenv("VOICEMEM_LLM_API_KEY")
+    or os.getenv("DEEPSEEK_API_KEY")
+    or os.getenv("OPENAI_API_KEY", "")
 )
+llm_base_url = os.getenv(
+    "VOICEMEM_LLM_BASE_URL", "https://api.deepseek.com/v1"
+).rstrip("/")
+llm_model = os.getenv("VOICEMEM_LLM_MODEL", "deepseek-chat")
+
+# Cascade already owns VAD/ASR/audio perception. Use VoiceMem's text mode and
+# local E5 retrieval so DeepSeek is only used for cognitive LLM work; DeepSeek
+# does not provide an embeddings endpoint.
+voice_mem: VoiceMem | None = None
+warmup_task: asyncio.Task | None = None
+warmup_error: str | None = None
+
+
+def create_voice_mem() -> VoiceMem:
+    return VoiceMem.from_config({
+        # Explicit internal name: avoid VoiceMem's multi-modal warmup because
+        # Cascade already owns ASR/VAD/audio perception.
+        "mode": os.getenv("VOICEMEM_MODE", "text_mode"),
+        "api_key": llm_key,
+        "base_url": llm_base_url,
+        "embedding": {"provider": "local"},
+        "slots": {"provider": "local"},
+        "llm": {"provider": "openai", "config": {
+            "model": llm_model,
+            "api_key": llm_key,
+            "base_url": llm_base_url,
+        }},
+    })
 streams: dict[str, TurnStream] = {}
 
 
 @app.on_event("startup")
 async def warmup() -> None:
-    await asyncio.to_thread(voice_mem.warmup)
+    global warmup_task
+    warmup_task = asyncio.create_task(load_voice_mem())
+
+
+async def load_voice_mem() -> None:
+    global voice_mem, warmup_error
+    try:
+        instance = await asyncio.to_thread(create_voice_mem)
+        # VoiceMem 0.2.3 warmup currently loads its own ASR/VAD/perception
+        # stack regardless of text_mode. Cascade already owns those stages;
+        # warm only the local text classifier used by speculative retrieval.
+        await asyncio.to_thread(instance.classify, "你好")
+        voice_mem = instance
+    except Exception as error:
+        warmup_error = str(error)
 
 
 def key_for(request: PartialRequest) -> str:
@@ -54,11 +96,17 @@ def result_payload(state: object) -> dict:
 
 @app.get("/health")
 async def health() -> dict:
+    if warmup_error:
+        return {"status": "error", "provider": "voicemem", "detail": warmup_error}
+    if voice_mem is None:
+        return {"status": "warming_up", "provider": "voicemem"}
     return {"status": "ok", "provider": "voicemem"}
 
 
 @app.post("/v1/turn/partial")
 async def turn_partial(request: PartialRequest) -> dict:
+    if voice_mem is None:
+        raise HTTPException(status_code=503, detail="VoiceMem is still warming up")
     text = request.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="text is required")

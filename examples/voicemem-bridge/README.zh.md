@@ -13,6 +13,17 @@ export OPENAI_API_KEY=...
 uvicorn app:app --host 127.0.0.1 --port 8765
 ```
 
+默认使用 DeepSeek，且默认以 `text_mode` 运行，避免和 Cascade 重复加载 ASR/VAD：
+
+```bash
+export DEEPSEEK_API_KEY=...
+# 可选：deepseek-chat / deepseek-reasoner，或任意 OpenAI-compatible 模型
+export VOICEMEM_LLM_MODEL=deepseek-chat
+export VOICEMEM_LLM_BASE_URL=https://api.deepseek.com/v1
+```
+
+记忆向量和 slot 分类默认使用本地 E5，不调用 DeepSeek Embeddings；因此不会把不支持 embeddings 的便宜模型错误地当成向量模型。也可以将 `VOICEMEM_LLM_BASE_URL` 指向自建 vLLM、Ollama OpenAI 兼容端点或其他免费额度服务。
+
 在 qwen-audio-agent 侧启用：
 
 ```bash
@@ -20,6 +31,6 @@ export CASCADE_TURN_CONTEXT_PROVIDER=voicemem
 export CASCADE_TURN_CONTEXT_URL=http://127.0.0.1:8765
 ```
 
-首次启动会按 VoiceMem 的实现加载本地模型，耗时和模型目录由 VoiceMem 决定。客户端不需要安装 Python；Mac、Windows、Linux 客户端都通过 Gateway 访问同一条能力链路。
+首次启动只预热本地 E5/slot 分类器，不会重复加载 Cascade 已负责的 ASR/VAD；耗时和模型目录由 VoiceMem 决定。客户端不需要安装 Python；Mac、Windows、Linux 客户端都通过 Gateway 访问同一条能力链路。
 
 本桥不调用 `ingest()`，因此不会自动修改 `USER.md`、`MEMORY.md` 或 episode。持久化策略仍由 qwen-audio-agent 的长期记忆和情节记忆层负责。
