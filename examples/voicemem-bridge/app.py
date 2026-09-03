@@ -26,15 +26,23 @@ class TurnStream:
 
 
 app = FastAPI(title="qwen-audio-agent VoiceMem bridge")
+llm_provider = os.getenv("VOICEMEM_LLM_PROVIDER", "deepseek").strip().lower()
+default_base_url = (
+    "http://127.0.0.1:11434/v1"
+    if llm_provider == "ollama"
+    else "https://api.deepseek.com/v1"
+)
 llm_key = (
     os.getenv("VOICEMEM_LLM_API_KEY")
     or os.getenv("DEEPSEEK_API_KEY")
     or os.getenv("OPENAI_API_KEY", "")
+    or ("ollama" if llm_provider == "ollama" else "")
 )
-llm_base_url = os.getenv(
-    "VOICEMEM_LLM_BASE_URL", "https://api.deepseek.com/v1"
-).rstrip("/")
-llm_model = os.getenv("VOICEMEM_LLM_MODEL", "deepseek-chat")
+llm_base_url = os.getenv("VOICEMEM_LLM_BASE_URL", default_base_url).rstrip("/")
+llm_model = os.getenv(
+    "VOICEMEM_LLM_MODEL",
+    "qwen2.5:7b" if llm_provider == "ollama" else "deepseek-chat",
+)
 
 # Cascade already owns VAD/ASR/audio perception. Use VoiceMem's text mode and
 # local E5 retrieval so DeepSeek is only used for cognitive LLM work; DeepSeek

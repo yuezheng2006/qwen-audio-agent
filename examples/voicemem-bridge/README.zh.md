@@ -22,6 +22,16 @@ export VOICEMEM_LLM_MODEL=deepseek-chat
 export VOICEMEM_LLM_BASE_URL=https://api.deepseek.com/v1
 ```
 
+切换到本机 Ollama：
+
+```bash
+export VOICEMEM_LLM_PROVIDER=ollama
+export VOICEMEM_LLM_MODEL=qwen2.5:7b  # 替换成 ollama list 中的实际模型名
+export VOICEMEM_LLM_BASE_URL=http://127.0.0.1:11434/v1
+```
+
+Ollama 不需要真实 API key，bridge 会使用占位值 `ollama`。本机已有的 `nomic-embed-text` 不直接用于 VoiceMem 记忆库，避免和已有 E5 记忆向量混用；当前 bridge 统一使用本地 E5 embedding。
+
 记忆向量和 slot 分类默认使用本地 E5，不调用 DeepSeek Embeddings；因此不会把不支持 embeddings 的便宜模型错误地当成向量模型。也可以将 `VOICEMEM_LLM_BASE_URL` 指向自建 vLLM、Ollama OpenAI 兼容端点或其他免费额度服务。
 
 在 qwen-audio-agent 侧启用：
