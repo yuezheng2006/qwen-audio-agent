@@ -18,8 +18,8 @@ uvicorn app:app --host 127.0.0.1 --port 8765
 ```bash
 export DEEPSEEK_API_KEY=...
 # 可选：deepseek-chat / deepseek-reasoner，或任意 OpenAI-compatible 模型
-export VOICEMEM_LLM_MODEL=deepseek-chat
-export VOICEMEM_LLM_BASE_URL=https://api.deepseek.com/v1
+export VOICEMEM_LLM_MODEL=deepseek-v4-flash
+export VOICEMEM_LLM_BASE_URL=https://api.deepseek.com
 ```
 
 切换到本机 Ollama：
