@@ -200,7 +200,6 @@ export default function App() {
   const [agentTasks, setAgentTasks] = useState([])
   const [desktopTasksCollapsed, setDesktopTasksCollapsed] = useState(false)
   const [showDomainLibrary, setShowDomainLibrary] = useState(false)
-  const [showWorkbenchMenu, setShowWorkbenchMenu] = useState(false)
   const [desktopTaskLayout, setDesktopTaskLayout] = useState({
     placement: 'below',
     orbOffsetX: 0,
@@ -1388,46 +1387,6 @@ export default function App() {
           {t('前台：{label}', { label: item.label })}
         </option>)}
       </select>}
-      {/* Keep secondary tools behind one stable entry so the top bar stays calm. */}
-      {!desktopOrbMode && (
-        <div className="workbench-menu-wrap">
-          <button
-            className={`ghost workbench-trigger${showVoiceStudio || showDomainLibrary ? ' active' : ''}`}
-            onClick={() => setShowWorkbenchMenu(value => !value)}
-            aria-expanded={showWorkbenchMenu}
-            aria-haspopup="menu"
-            title={t('打开工作台')}
-          >
-            <span>{t('工作台')}</span><span className="menu-chevron" aria-hidden="true">⌄</span>
-          </button>
-          {showWorkbenchMenu && <div className="workbench-menu" role="menu">
-            <button
-              type="button"
-              className={showVoiceStudio ? 'active' : ''}
-              onClick={() => {
-                setShowVoiceStudio(true)
-                setShowDomainLibrary(false)
-                setShowWorkbenchMenu(false)
-              }}
-              role="menuitem"
-            >
-              <span>{t('语音工作室')}</span><small>{t('录音、裁剪和管理个人音色')}</small>
-            </button>
-            <button
-              type="button"
-              className={showDomainLibrary ? 'active' : ''}
-              onClick={() => {
-                setShowDomainLibrary(value => !value)
-                setShowVoiceStudio(false)
-                setShowWorkbenchMenu(false)
-              }}
-              role="menuitem"
-            >
-              <span>{t('资料库')}</span><small>{t('把本机的手册、规章、教材交给助手')}</small>
-            </button>
-          </div>}
-        </div>
-      )}
       <button
         className={`ghost session-action${desktopOrbMode ? ' desktop-new-session' : ''}`}
         onClick={resetSession}
@@ -1470,6 +1429,45 @@ export default function App() {
       </button>}
       </div>
     </header>
+
+    {!desktopOrbMode && <aside className="app-rail" aria-label={t('工作区导航')}>
+      <div className="rail-brand" aria-label="qwen-audio-agent">
+        <span>V</span>
+        <small>QWEN<br />VOICE</small>
+      </div>
+      <nav className="rail-nav">
+        <button className="rail-item active" type="button" aria-current="page">
+          <OrbControlIcon type="conversation" />
+          <span>{t('对话')}</span>
+        </button>
+        <button
+          className={`rail-item${showVoiceStudio ? ' active' : ''}`}
+          type="button"
+          onClick={() => {
+            setShowVoiceStudio(true)
+            setShowDomainLibrary(false)
+          }}
+        >
+          <span className="rail-glyph">◌</span>
+          <span>{t('声音')}</span>
+        </button>
+        <button
+          className={`rail-item${showDomainLibrary ? ' active' : ''}`}
+          type="button"
+          onClick={() => {
+            setShowDomainLibrary(true)
+            setShowVoiceStudio(false)
+          }}
+        >
+          <span className="rail-glyph">▤</span>
+          <span>{t('资料')}</span>
+        </button>
+      </nav>
+      <div className="rail-footer">
+        <span className={`rail-health${healthValidated ? ' ready' : ''}`} aria-hidden="true" />
+        <small>{healthValidated ? t('本地已连接') : t('正在连接')}</small>
+      </div>
+    </aside>}
 
     <section className="workspace">
       {showDomainLibrary && <DomainLibraryPanel
