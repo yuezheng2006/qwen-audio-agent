@@ -1350,7 +1350,7 @@ export default function App() {
   }`}>
     <header>
       <div className="topbar-meta">
-        <div className="brand"><span>V</span><div>qwen-audio-agent<small>REALTIME VOICE · LIVE</small></div></div>
+        <div className="brand"><span>V</span><div>聆界 <em>Lingora</em><small>LOCAL AGENT · LIVE</small></div></div>
         <a
           className="backend"
           href={backend.url || undefined}

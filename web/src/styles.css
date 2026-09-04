@@ -278,6 +278,7 @@ header {
   box-shadow: 0 0 25px #7156e768;
 }
 .brand div { display: flex; flex-direction: column; white-space: nowrap; }
+.brand em { margin-left: 3px; color: #9f93d8; font-size: .88em; font-style: normal; font-weight: 600; }
 .brand small { margin-top: 2px; font-size: 8px; letter-spacing: .16em; color: #777384; }
 .backend, .status { display: flex; align-items: center; gap: 8px; color: #9795a0; font-size: 12px; }
 .backend { text-decoration: none; }
