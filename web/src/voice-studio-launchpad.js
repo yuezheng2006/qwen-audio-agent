@@ -1,59 +1,14 @@
-/** Launchpad tiles aligned with VoiceStudio IA (subset; no full port). */
-export const VOICE_STUDIO_TILES = [
-  {
-    id: 'gallery',
-    title: '使用一个声音',
-    blurb: '试听声音，并选它来和助手聊天',
-    status: 'live',
-    view: 'gallery',
-  },
-  {
-    id: 'clone',
-    title: '复制我的声音',
-    blurb: '录一小段声音，生成属于你的音色',
-    status: 'live',
-    view: 'clone',
-  },
-  {
-    id: 'design',
-    title: '声音设计',
-    blurb: '描述式生成音色',
-    status: 'soon',
-  },
-  {
-    id: 'dub',
-    title: '视频配音',
-    blurb: '转录翻译再配音',
-    status: 'live',
-    view: 'dub',
-  },
-  {
-    id: 'audiobook',
-    title: '朗读一本书',
-    blurb: '导入书籍，用选定的声音朗读',
-    status: 'live',
-    jump: 'reading',
-  },
-  {
-    id: 'stories',
-    title: '故事模式',
-    blurb: '多角色配音',
-    status: 'soon',
-  },
-  {
-    id: 'dictation',
-    title: '听写',
-    blurb: '系统快捷键',
-    status: 'soon',
-  },
-  {
-    id: 'engines',
-    title: '高级设置',
-    blurb: '调整语音前台和连接方式',
-    status: 'jump',
-    jump: 'mode',
-  },
-]
+import { VOICE_WORKFLOWS } from '../../shared/voice-workflows.mjs'
+
+/** UI projection of the shared workflow catalog. Execution stays in adapters. */
+export const VOICE_STUDIO_TILES = VOICE_WORKFLOWS.map(workflow => ({
+  id: workflow.id.replace('voice-', '').replace('video-dubbing', 'dub').replace('multi-voice-story', 'stories').replace('model-catalogue', 'engines'),
+  title: workflow.title,
+  blurb: workflow.description,
+  status: workflow.status === 'planned' ? 'soon' : workflow.status === 'settings' ? 'jump' : 'live',
+  ...(workflow.view ? { view: workflow.view } : {}),
+  ...(workflow.jump ? { jump: workflow.jump } : {}),
+}))
 
 export function defaultVoiceStudioView() {
   return 'launchpad'

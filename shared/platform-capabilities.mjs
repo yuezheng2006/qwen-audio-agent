@@ -10,6 +10,8 @@ export const PLATFORM_CAPABILITIES = Object.freeze([
   'speech.transcribe',
   'speech.synthesize',
   'speech.clone',
+  'speech.design',
+  'model.catalogue',
   'voice.profile.list',
   'voice.profile.select',
 ])
@@ -90,4 +92,3 @@ export function validatePlatformManifestMetadata(manifest = {}) {
     ...(healthcheck ? { healthcheck } : {}),
   })
 }
-
