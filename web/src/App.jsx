@@ -1431,10 +1431,7 @@ export default function App() {
     </header>
 
     {!desktopOrbMode && <aside className="app-rail" aria-label={t('工作区导航')}>
-      <div className="rail-brand" aria-label="qwen-audio-agent">
-        <span>V</span>
-        <small>QWEN<br />VOICE</small>
-      </div>
+      <p className="rail-kicker">WORKSPACE</p>
       <nav className="rail-nav">
         <button className="rail-item active" type="button" aria-current="page">
           <OrbControlIcon type="conversation" />
@@ -1481,17 +1478,42 @@ export default function App() {
         onRuntimeChange={setRuntimeSnapshot}
         onModeSwitching={() => {}}
       />
-      <div className="hero">
+      <div className="workspace-heading">
+        <div>
+          <span className="eyebrow">{t('实时会话')}</span>
+          <h1>{t('今天想做什么？')}</h1>
+        </div>
+        <small className="session-caption">{t('本地优先 · 随时可以打断')}</small>
+      </div>
+
+      <div className={`hero voice-stage ${orbVisualState}`}>
+        <div className="stage-orb-wrap">
+          <button
+            className={`orb ${orbVisualState}`}
+            onClick={handleVoiceOrbClick}
+            aria-label={t('语音交互')}
+          >
+            <span />
+          </button>
+          <span className="stage-live-dot" aria-hidden="true" />
+        </div>
+        <div className="stage-copy">
+          <p>{voiceEnabled ? t('麦克风已开启') : t('准备好了')}</p>
+          <strong>{voice.error || activity}</strong>
+          <small>{voiceEnabled
+            ? t('直接说话，我会边听边处理')
+            : t('点击紫色圆球，开始一段自然对话')}</small>
+        </div>
         <button
-          className={`orb ${orbVisualState}`}
-          onClick={handleVoiceOrbClick}
-          aria-label={t('语音交互')}
+          className={`stage-action${voiceEnabled ? ' active' : ''}`}
+          onClick={() => {
+            if (voiceEnabled || waitingForVoice) disableVoice()
+            else enableVoice()
+          }}
         >
-          <span />
+          <OrbControlIcon type="microphone" muted={!voiceEnabled} />
+          <span>{voiceEnabled ? t('结束聆听') : t('开始说话')}</span>
         </button>
-        <p>VOICE FRONTEND</p>
-        <h1>{t('你说，我来调度。')}</h1>
-        <small>{voice.error || activity}</small>
       </div>
 
       <div
