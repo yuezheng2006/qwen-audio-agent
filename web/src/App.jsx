@@ -1486,6 +1486,7 @@ export default function App() {
         <small className="session-caption">{t('本地优先 · 随时可以打断')}</small>
       </div>
 
+      <div className="conversation-canvas">
       <div className={`hero voice-stage ${orbVisualState}`}>
         <div className="stage-orb-wrap">
           <button
@@ -1546,6 +1547,32 @@ export default function App() {
         onSend={sendComposerInput}
         compact={desktopOrbMode}
       />}
+
+      </div>
+      <aside className="session-inspector" aria-label={t('会话信息')}>
+        <div className="inspector-heading">
+          <span className="eyebrow">{t('当前会话')}</span>
+          <span className="inspector-state"><i className={healthValidated ? 'ready' : ''} />{healthValidated ? t('已连接') : t('连接中')}</span>
+        </div>
+        <div className="inspector-block">
+          <small>{t('实时前台')}</small>
+          <strong>{frontend.label || t('默认前台')}</strong>
+          <span>{modelStatus.label || t('模型信息不可用')}</span>
+        </div>
+        <div className="inspector-block">
+          <small>{t('语音状态')}</small>
+          <strong>{labelFor(orbVisualState)}</strong>
+          <span>{voiceEnabled ? t('麦克风正在监听') : t('麦克风未开启')}</span>
+        </div>
+        <div className="inspector-block">
+          <small>{t('会话 ID')}</small>
+          <code>{sessionId.slice(0, 8)}</code>
+        </div>
+        <div className="inspector-note">
+          <span>⌁</span>
+          <p>{t('本地 Agent 优先，当前轮次记忆只在回复时使用。')}</p>
+        </div>
+      </aside>
 
     </section>
   </main>

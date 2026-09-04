@@ -2238,3 +2238,53 @@ header select.frontend-provider option {
   .stage-action { grid-column: 1 / -1; width: 100%; min-height: 40px; padding: 9px 12px; border: 1px solid #ffffff1e; border-radius: 10px; color: #e6e1f1; background: #ffffff0a; }
   .stage-action.active { color: #fff; background: #7659e6; }
 }
+
+/* VoiceStudio-style workbench: canvas + inspector. */
+@media (min-width: 1100px) {
+  .app:not(.desktop-conversation-panel) .workspace {
+    width: min(1180px, calc(100% - var(--app-rail-width) - 64px));
+    grid-template-columns: minmax(0, 1fr) 232px;
+    gap: 18px;
+  }
+
+  .app:not(.desktop-conversation-panel) .workspace-heading,
+  .app:not(.desktop-conversation-panel) .domain-panel,
+  .app:not(.desktop-conversation-panel) .voice-studio-panel {
+    grid-column: 1 / -1;
+  }
+
+  .conversation-canvas { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+
+  .session-inspector {
+    min-width: 0;
+    align-self: start;
+    padding: 16px;
+    border: 1px solid #ffffff14;
+    border-radius: 16px;
+    background: #101116;
+  }
+
+  .inspector-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #ffffff0e;
+  }
+
+  .inspector-state { display: inline-flex; align-items: center; gap: 6px; color: #777582; font-size: 10px; }
+  .inspector-state i { width: 6px; height: 6px; border-radius: 50%; background: #5b5864; }
+  .inspector-state i.ready { background: #50dfab; box-shadow: 0 0 8px #50dfab; }
+  .inspector-block { display: grid; gap: 5px; padding: 15px 0; border-bottom: 1px solid #ffffff0e; }
+  .inspector-block small { color: #686572; font-size: 10px; }
+  .inspector-block strong { overflow: hidden; color: #e9e5f0; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+  .inspector-block span, .inspector-block code { overflow: hidden; color: #85818e; font: inherit; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+  .inspector-note { display: flex; gap: 8px; padding-top: 15px; color: #9b8ce3; }
+  .inspector-note span { font-size: 17px; line-height: 1; }
+  .inspector-note p { margin: 0; color: #777582; font-size: 10px; line-height: 1.5; }
+}
+
+@media (max-width: 1099px) {
+  .session-inspector { display: none; }
+  .conversation-canvas { min-width: 0; display: flex; flex-direction: column; }
+}
