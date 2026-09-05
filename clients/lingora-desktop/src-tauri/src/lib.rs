@@ -1,4 +1,6 @@
 use serde::Serialize;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Debug, Serialize)]
 struct ClientInfo {
@@ -16,6 +18,76 @@ struct GatewayHealth {
     status_code: Option<u16>,
     payload: Option<serde_json::Value>,
     error: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct GatewayCommandResult {
+    ok: bool,
+    action: String,
+    output: String,
+    error: Option<String>,
+}
+
+fn runtime_root() -> PathBuf {
+    std::env::var_os("LINGORA_RUNTIME_ROOT")
+        .map(PathBuf::from)
+        .or_else(|| std::env::current_dir().ok())
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn gateway_action_args(action: &str) -> Option<Vec<&'static str>> {
+    match action {
+        "start" => Some(vec!["scripts/start-gateway.mjs", "cascade"]),
+        "stop" => Some(vec!["scripts/start-gateway.mjs", "stop"]),
+        _ => None,
+    }
+}
+
+fn run_gateway_action(action: &str, root: &Path) -> GatewayCommandResult {
+    let Some(args) = gateway_action_args(action) else {
+        return GatewayCommandResult {
+            ok: false,
+            action: action.to_string(),
+            output: String::new(),
+            error: Some("unsupported gateway action".to_string()),
+        };
+    };
+    let script = root.join(args[0]);
+    if !script.is_file() {
+        return GatewayCommandResult {
+            ok: false,
+            action: action.to_string(),
+            output: String::new(),
+            error: Some(format!("gateway runtime not found: {}", script.display())),
+        };
+    }
+
+    match Command::new("node").current_dir(root).args(args).output() {
+        Ok(result) => {
+            let stdout = String::from_utf8_lossy(&result.stdout).trim().to_string();
+            let stderr = String::from_utf8_lossy(&result.stderr).trim().to_string();
+            GatewayCommandResult {
+                ok: result.status.success(),
+                action: action.to_string(),
+                output: if stdout.is_empty() {
+                    stderr.clone()
+                } else {
+                    stdout
+                },
+                error: if result.status.success() || stderr.is_empty() {
+                    None
+                } else {
+                    Some(stderr)
+                },
+            }
+        }
+        Err(error) => GatewayCommandResult {
+            ok: false,
+            action: action.to_string(),
+            output: String::new(),
+            error: Some(error.to_string()),
+        },
+    }
 }
 
 #[tauri::command]
@@ -74,10 +146,39 @@ async fn gateway_health(base_url: Option<String>) -> GatewayHealth {
     }
 }
 
+#[tauri::command]
+async fn gateway_start() -> GatewayCommandResult {
+    tauri::async_runtime::spawn_blocking(|| run_gateway_action("start", &runtime_root()))
+        .await
+        .unwrap_or_else(|error| GatewayCommandResult {
+            ok: false,
+            action: "start".to_string(),
+            output: String::new(),
+            error: Some(error.to_string()),
+        })
+}
+
+#[tauri::command]
+async fn gateway_stop() -> GatewayCommandResult {
+    tauri::async_runtime::spawn_blocking(|| run_gateway_action("stop", &runtime_root()))
+        .await
+        .unwrap_or_else(|error| GatewayCommandResult {
+            ok: false,
+            action: "stop".to_string(),
+            output: String::new(),
+            error: Some(error.to_string()),
+        })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![client_info, gateway_health])
+        .invoke_handler(tauri::generate_handler![
+            client_info,
+            gateway_health,
+            gateway_start,
+            gateway_stop
+        ])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -90,4 +191,22 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::gateway_action_args;
+
+    #[test]
+    fn gateway_actions_are_fixed_to_the_local_runtime_contract() {
+        assert_eq!(
+            gateway_action_args("start"),
+            Some(vec!["scripts/start-gateway.mjs", "cascade"])
+        );
+        assert_eq!(
+            gateway_action_args("stop"),
+            Some(vec!["scripts/start-gateway.mjs", "stop"])
+        );
+        assert_eq!(gateway_action_args("restart"), None);
+    }
 }

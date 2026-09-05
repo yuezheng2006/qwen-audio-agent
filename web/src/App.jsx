@@ -33,6 +33,7 @@ import { desktopOrbClassName, resolveOrbVisualState } from './orb-presentation.j
 import {
   readNativeClientInfo,
   readNativeGatewayHealth,
+  startNativeGateway,
 } from './desktop-bridge.js'
 import {
   isBuiltinOrbSkin,
@@ -238,7 +239,14 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     Promise.all([readNativeClientInfo(), readNativeGatewayHealth()])
-      .then(([info, gateway]) => {
+      .then(async ([info, gateway]) => {
+        if (cancelled) return
+        if (info && !gateway?.reachable) {
+          const started = await startNativeGateway()
+          if (started?.ok) {
+            gateway = await readNativeGatewayHealth()
+          }
+        }
         if (cancelled) return
         setNativeClient(info)
         setNativeGateway(gateway)
