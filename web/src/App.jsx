@@ -31,10 +31,13 @@ import DomainLibraryPanel from './DomainLibraryPanel.jsx'
 import VoiceStudioPanel from './VoiceStudioPanel.jsx'
 import { desktopOrbClassName, resolveOrbVisualState } from './orb-presentation.js'
 import {
+  installNativeGatewayTransport,
   readNativeClientInfo,
   readNativeGatewayHealth,
   startNativeGateway,
 } from './desktop-bridge.js'
+
+installNativeGatewayTransport()
 import {
   isBuiltinOrbSkin,
 } from '../../shared/orb-skin-catalog.mjs'

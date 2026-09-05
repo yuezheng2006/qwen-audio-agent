@@ -19,11 +19,19 @@ import { decodePcm, pcmBase64, resample } from './audio.js'
 import { createMicrophoneCaptureLifecycle } from './microphone-capture.js'
 import { confirmTrackedPlaybackStart } from './playback-lifecycle.js'
 import { t } from './i18n.js'
+import { nativeGatewayOrigin } from './desktop-bridge.js'
 
 const DEFAULT_INPUT_RATE = 16000
 const OUTPUT_RATE = 24000
 
 function socketUrl(sessionId) {
+  const nativeOrigin = nativeGatewayOrigin()
+  if (nativeOrigin) {
+    const protocol = nativeOrigin.startsWith('https:') ? 'wss:' : 'ws:'
+    const host = nativeOrigin.replace(/^https?:\/\//, '')
+    return protocol + '//' + host + '/api/realtime?sessionId='
+      + encodeURIComponent(sessionId)
+  }
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
   const basePath = location.pathname.endsWith('/')
     ? location.pathname
