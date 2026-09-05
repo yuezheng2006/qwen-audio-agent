@@ -2568,3 +2568,43 @@ header select.frontend-provider option {
   .voice-studio-app .voice-row-list { grid-template-columns: 1fr; }
   .voice-studio-app .studio-topbar-title { display: none; }
 }
+
+.voice-studio-app .voice-clone-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+  align-items: start;
+  gap: 14px;
+}
+.voice-studio-app .voice-clone-callout,
+.voice-studio-app .voice-tips-fold { grid-column: 1 / -1; }
+.voice-studio-app .voice-recorder,
+.voice-studio-app .voice-clone-form,
+.voice-studio-app .voice-recorded-clone-form {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #242424;
+  border-radius: 10px;
+  background: #171717;
+}
+.voice-studio-app .voice-recorder { grid-column: 1; }
+.voice-studio-app .voice-recorded-clone-form,
+.voice-studio-app .voice-clone-form { grid-column: 2; }
+.voice-studio-app .voice-clone-callout {
+  padding: 12px 14px;
+  border: 1px solid #3d2d36;
+  border-radius: 8px;
+  background: #20181d;
+}
+.voice-studio-app .voice-clone-callout strong { color: #ecd9df; }
+.voice-studio-app .voice-clone-callout p { margin: 5px 0 0; color: #95868b; }
+.voice-studio-app .voice-clone-form-label { color: #d8caca; }
+.voice-studio-app .voice-primary-btn,
+.voice-studio-app .voice-secondary-btn { border-radius: 6px; }
+
+@media (max-width: 780px) {
+  .voice-studio-app .voice-clone-body { grid-template-columns: 1fr; }
+  .voice-studio-app .voice-recorder,
+  .voice-studio-app .voice-recorded-clone-form,
+  .voice-studio-app .voice-clone-form { grid-column: 1; }
+}

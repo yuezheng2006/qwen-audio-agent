@@ -211,7 +211,7 @@ export default function App() {
   const [spriteAnimationCues, setSpriteAnimationCues] = useState([])
   const [spriteOrbFailed, setSpriteOrbFailed] = useState(false)
   const [desktopLifecycle, setDesktopLifecycle] = useState('active')
-  const [showVoiceStudio, setShowVoiceStudio] = useState(false)
+  const [showVoiceStudio, setShowVoiceStudio] = useState(true)
   const [nativeClient, setNativeClient] = useState(null)
   const [nativeGateway, setNativeGateway] = useState(null)
   const [desktopSurfaceMode, setDesktopSurfaceMode] = useState(
@@ -1464,7 +1464,15 @@ export default function App() {
     {!desktopOrbMode && <aside className="app-rail" aria-label={t('工作区导航')}>
       <p className="rail-kicker">WORKSPACE</p>
       <nav className="rail-nav">
-        <button className="rail-item active" type="button" aria-current="page">
+        <button
+          className={`rail-item${!showVoiceStudio && !showDomainLibrary ? ' active' : ''}`}
+          type="button"
+          aria-current={!showVoiceStudio && !showDomainLibrary ? 'page' : undefined}
+          onClick={() => {
+            setShowVoiceStudio(false)
+            setShowDomainLibrary(false)
+          }}
+        >
           <OrbControlIcon type="conversation" />
           <span>{t('对话')}</span>
         </button>
