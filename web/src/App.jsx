@@ -1473,7 +1473,7 @@ export default function App() {
             setShowDomainLibrary(false)
           }}
         >
-          <OrbControlIcon type="conversation" />
+          <MessageSquare size={18} strokeWidth={1.8} aria-hidden="true" />
           <span>{t('对话')}</span>
         </button>
         <button
@@ -1484,7 +1484,7 @@ export default function App() {
             setShowDomainLibrary(false)
           }}
         >
-          <span className="rail-glyph">◌</span>
+          <Mic size={18} strokeWidth={1.8} aria-hidden="true" />
           <span>{t('声音')}</span>
         </button>
         <button
@@ -1495,7 +1495,7 @@ export default function App() {
             setShowVoiceStudio(false)
           }}
         >
-          <span className="rail-glyph">▤</span>
+          <ListTodo size={18} strokeWidth={1.8} aria-hidden="true" />
           <span>{t('资料')}</span>
         </button>
       </nav>
