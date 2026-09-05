@@ -1374,12 +1374,14 @@ export default function App() {
 
   return <main className={`app${
     desktopOrbMode ? ' desktop-conversation-panel' : ''
+  }${showVoiceStudio ? ' voice-studio-app' : ''
   }`}>
     <header>
       <div className="topbar-meta">
         <div className="brand"><span>V</span><div>聆界 <em>Lingora</em><small>{nativeClient
           ? 'RUST CLIENT · ' + (nativeGateway?.reachable ? 'GATEWAY READY' : 'GATEWAY OFFLINE')
           : 'LOCAL AGENT · LIVE'}</small></div></div>
+        <div className="studio-topbar-title" aria-hidden="true">VoiceStudio</div>
         <a
           className="backend"
           href={backend.url || undefined}

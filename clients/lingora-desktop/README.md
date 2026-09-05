@@ -11,10 +11,12 @@ The client is intentionally a separate host from the Agent runtime:
 
 ## Development
 
-From the repository root:
+From this directory:
 
 ```bash
-cargo tauri dev --directory clients/lingora-desktop
+cargo tauri dev
 ```
+
+The Vite workbench uses port `5174` in this repository; the Tauri dev URL is kept in sync with that configuration.
 
 The first slice only establishes the Tauri host and exposes a `client_info` command. Gateway lifecycle and native audio are deliberately migrated behind separate Rust seams.

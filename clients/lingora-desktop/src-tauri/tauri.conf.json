@@ -5,9 +5,9 @@
   "identifier": "com.lingora.desktop",
   "build": {
     "frontendDist": "../../../web/dist",
-    "devUrl": "http://127.0.0.1:5173",
-    "beforeDevCommand": "npm run dev --workspace web",
-    "beforeBuildCommand": "npm run build"
+    "devUrl": "http://127.0.0.1:5174",
+    "beforeDevCommand": "npm --prefix ../.. run dev:web",
+    "beforeBuildCommand": "npm --prefix ../.. run build"
   },
   "app": {
     "windows": [

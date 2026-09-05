@@ -306,6 +306,18 @@ export default function VoiceGallery({
     <div className="voice-studio-body voice-gallery">
       {error && <p className="settings-error">{error}</p>}
 
+      <div className="voice-gallery-heading">
+        <div>
+          <span className="voice-gallery-kicker">VOICE LIBRARY</span>
+          <h2>声音库</h2>
+          <p>浏览、试听并选用你的 Agent 音色。</p>
+        </div>
+        <div className="voice-gallery-view-toggle" aria-label="视图切换">
+          <button type="button" className="active" aria-label="卡片视图">▦</button>
+          <button type="button" aria-label="列表视图">☷</button>
+        </div>
+      </div>
+
       {runtime?.frontendMode !== 'cascade' ? (
         <p className="voice-studio-note">当前非 cascade 模式，请先到引擎设置切换为级联。</p>
       ) : (
