@@ -1466,7 +1466,7 @@ export default function App() {
       </div>
     </aside>}
 
-    <section className="workspace">
+    <section className={`workspace${showVoiceStudio ? ' workspace-voice-studio' : ''}`}>
       {showDomainLibrary && <DomainLibraryPanel
         onClose={() => setShowDomainLibrary(false)}
         getTask={voice.getTask}
