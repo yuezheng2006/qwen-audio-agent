@@ -1,10 +1,6 @@
-export const VOICE_PROFILE_STATUSES = [
-  'draft',
-  'cloning',
-  'ready',
-  'confirmed',
-  'failed',
-]
+import { VOICE_PROFILE_STATUSES } from '../../../../shared/voice-profile-contract.mjs'
+
+export { VOICE_PROFILE_STATUSES }
 
 export function serializeProfile(profile) {
   if (!profile) return null

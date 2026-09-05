@@ -57,6 +57,7 @@
     "./turn-context-provider": "./server/src/voice/cascade/turn-context.mjs",
     "./platform-capabilities": "./shared/platform-capabilities.mjs",
     "./voice-workflows": "./shared/voice-workflows.mjs",
+    "./voice-profile-contract": "./shared/voice-profile-contract.mjs",
     "./cascade-tts-plugins": "./shared/cascade-tts-plugins.mjs",
     "./media-job": "./server/src/media/media-job.mjs",
     "./media-ffmpeg": "./server/src/media/media-ffmpeg.mjs",
