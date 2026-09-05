@@ -74,7 +74,7 @@ export const VOICE_WORKFLOWS = Object.freeze([
   defineVoiceWorkflow({
     id: 'model-catalogue', title: '模型目录',
     description: '查看模型、设备和插件状态', status: 'settings',
-    capabilities: ['model.catalogue'], jump: 'mode',
+    capabilities: ['model.catalogue'], jump: 'catalogue',
   }),
 ])
 

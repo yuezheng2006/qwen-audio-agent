@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
 import VoiceGallery from './VoiceGallery.jsx'
 import MediaWorkspacePanel from './MediaWorkspacePanel.jsx'
+import ModelCataloguePanel from './ModelCataloguePanel.jsx'
 import {
   VOICE_STUDIO_TILES,
   resolveVoiceStudioView,
@@ -456,7 +457,9 @@ export default function VoiceStudioPanel({
       ? '克隆'
       : view === 'dub'
         ? '视频配音'
-      : '语音工作室'
+        : view === 'catalogue'
+          ? '模型目录'
+          : '语音工作室'
 
   const onTile = (tile) => {
     if (tile.status === 'soon') return
@@ -468,6 +471,10 @@ export default function VoiceStudioPanel({
     if (tile.status === 'jump' && tile.jump === 'mode') {
       onClose?.()
       onOpenSettings?.('mode')
+      return
+    }
+    if (tile.status === 'jump' && tile.jump === 'catalogue') {
+      setView('catalogue')
       return
     }
     if (tile.view) setView(tile.view)
@@ -506,6 +513,7 @@ export default function VoiceStudioPanel({
             <Tabs.Trigger value="gallery">声音库</Tabs.Trigger>
             <Tabs.Trigger value="clone">克隆</Tabs.Trigger>
             <Tabs.Trigger value="dub">配音</Tabs.Trigger>
+            <Tabs.Trigger value="catalogue">模型</Tabs.Trigger>
           </Tabs.List>
         </Tabs.Root>
 
@@ -557,6 +565,7 @@ export default function VoiceStudioPanel({
           />
         )}
         {view === 'dub' && <MediaWorkspacePanel open={open && view === 'dub'} />}
+        {view === 'catalogue' && <ModelCataloguePanel />}
       </div>
     </div>
   )

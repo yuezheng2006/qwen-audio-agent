@@ -18,5 +18,6 @@ test('launchpad includes live gallery and clone tiles', () => {
 test('voice studio view defaults and resolves safely', () => {
   assert.equal(defaultVoiceStudioView(), 'launchpad')
   assert.equal(resolveVoiceStudioView('gallery'), 'gallery')
+  assert.equal(resolveVoiceStudioView('catalogue'), 'catalogue')
   assert.equal(resolveVoiceStudioView('nope'), 'launchpad')
 })

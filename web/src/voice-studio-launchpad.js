@@ -15,6 +15,6 @@ export function defaultVoiceStudioView() {
 }
 
 export function resolveVoiceStudioView(requested) {
-  const allowed = new Set(['launchpad', 'gallery', 'clone', 'dub'])
+  const allowed = new Set(['launchpad', 'gallery', 'clone', 'dub', 'catalogue'])
   return allowed.has(requested) ? requested : 'launchpad'
 }
