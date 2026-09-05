@@ -30,6 +30,7 @@ import DesktopSpriteOrb from './DesktopSpriteOrb.jsx'
 import DomainLibraryPanel from './DomainLibraryPanel.jsx'
 import VoiceStudioPanel from './VoiceStudioPanel.jsx'
 import { desktopOrbClassName, resolveOrbVisualState } from './orb-presentation.js'
+import { readNativeClientInfo } from './desktop-bridge.js'
 import {
   isBuiltinOrbSkin,
 } from '../../shared/orb-skin-catalog.mjs'
@@ -204,6 +205,7 @@ export default function App() {
   const [spriteOrbFailed, setSpriteOrbFailed] = useState(false)
   const [desktopLifecycle, setDesktopLifecycle] = useState('active')
   const [showVoiceStudio, setShowVoiceStudio] = useState(false)
+  const [nativeClient, setNativeClient] = useState(null)
   const [desktopSurfaceMode, setDesktopSurfaceMode] = useState(
     initialDesktopSurfaceMode,
   )
@@ -228,6 +230,20 @@ export default function App() {
   const sessionIdRef = useRef(sessionId)
   sessionIdRef.current = sessionId
   const spriteAnimationCue = spriteAnimationCues[0] || null
+
+  useEffect(() => {
+    let cancelled = false
+    readNativeClientInfo()
+      .then(info => {
+        if (!cancelled) setNativeClient(info)
+      })
+      .catch(() => {
+        // Browser mode and older clients simply stay on the web identity.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!desktopOrbMode) return undefined
@@ -1344,7 +1360,7 @@ export default function App() {
   }`}>
     <header>
       <div className="topbar-meta">
-        <div className="brand"><span>V</span><div>聆界 <em>Lingora</em><small>LOCAL AGENT · LIVE</small></div></div>
+        <div className="brand"><span>V</span><div>聆界 <em>Lingora</em><small>{nativeClient ? 'RUST CLIENT · LOCAL AGENT' : 'LOCAL AGENT · LIVE'}</small></div></div>
         <a
           className="backend"
           href={backend.url || undefined}
