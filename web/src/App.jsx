@@ -7,6 +7,16 @@ import {
   useState,
 } from 'react'
 import {
+  ChevronDown,
+  ChevronUp,
+  ListTodo,
+  MessageSquare,
+  Mic,
+  MicOff,
+  Settings2,
+  X,
+} from 'lucide-react'
+import {
   buildConversationTurns,
   discardUserTranscript,
   mergeConversationHistory,
@@ -119,37 +129,21 @@ function frontendLabel(holder) {
 
 function OrbControlIcon({ type, muted = false, collapsed = false }) {
   if (type === 'microphone') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="9" y="3.5" width="6" height="11" rx="3" />
-      <path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3m-3 0h6" />
-      {muted && <path d="M4 4 20 20" />}
-    </svg>
+    return muted ? <MicOff aria-hidden="true" /> : <Mic aria-hidden="true" />
   }
   if (type === 'settings') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2 2 0 0 1-2.83 2.83l-.04-.04a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.08 1.65V21a2 2 0 0 1-4 0v-.06A1.8 1.8 0 0 0 8.8 19.3a1.8 1.8 0 0 0-1.98.36l-.04.04a2 2 0 0 1-2.83-2.83l.04-.04a1.8 1.8 0 0 0 .36-1.98A1.8 1.8 0 0 0 2.7 13.8H2.6a2 2 0 0 1 0-4h.06A1.8 1.8 0 0 0 4.3 8.72a1.8 1.8 0 0 0-.36-1.98l-.04-.04a2 2 0 0 1 2.83-2.83l.04.04a1.8 1.8 0 0 0 1.98.36A1.8 1.8 0 0 0 9.82 2.6V2.5a2 2 0 0 1 4 0v.06A1.8 1.8 0 0 0 14.9 4.2a1.8 1.8 0 0 0 1.98-.36l.04-.04a2 2 0 0 1 2.83 2.83l-.04.04a1.8 1.8 0 0 0-.36 1.98 1.8 1.8 0 0 0 1.65 1.08h.1a2 2 0 0 1 0 4h-.06A1.8 1.8 0 0 0 19.4 15Z" />
-    </svg>
+    return <Settings2 aria-hidden="true" />
   }
   if (type === 'conversation') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5 5.5h14v10H9l-4 3v-13Z" />
-      <path d="M8 9h8m-8 3h5" />
-    </svg>
+    return <MessageSquare aria-hidden="true" />
   }
   if (type === 'collapse') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m8 10 4 4 4-4" />
-    </svg>
+    return <ChevronDown aria-hidden="true" />
   }
   if (type === 'tasks') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d={collapsed ? 'm7 9 5 5 5-5' : 'm7 14 5-5 5 5'} />
-    </svg>
+    return <span aria-hidden="true">{collapsed ? <ChevronDown /> : <ChevronUp />}</span>
   }
-  return <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="m7 7 10 10M17 7 7 17" />
-  </svg>
+  return type === 'list' ? <ListTodo aria-hidden="true" /> : <X aria-hidden="true" />
 }
 
 function upsertTask(items, taskId, update, fallback) {

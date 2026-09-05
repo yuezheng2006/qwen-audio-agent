@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import * as Tabs from '@radix-ui/react-tabs'
 import VoiceGallery from './VoiceGallery.jsx'
 import MediaWorkspacePanel from './MediaWorkspacePanel.jsx'
 import {
@@ -494,6 +495,19 @@ export default function VoiceStudioPanel({
             关闭
           </button>
         </header>
+
+        <Tabs.Root
+          className="voice-studio-tabs"
+          value={view}
+          onValueChange={setView}
+        >
+          <Tabs.List aria-label="语音工作室工作区">
+            <Tabs.Trigger value="launchpad">工作室</Tabs.Trigger>
+            <Tabs.Trigger value="gallery">声音库</Tabs.Trigger>
+            <Tabs.Trigger value="clone">克隆</Tabs.Trigger>
+            <Tabs.Trigger value="dub">配音</Tabs.Trigger>
+          </Tabs.List>
+        </Tabs.Root>
 
         {view === 'launchpad' && (
           <div className="voice-studio-body">
