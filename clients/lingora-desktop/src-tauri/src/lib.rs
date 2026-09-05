@@ -1,6 +1,7 @@
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tauri::Manager;
 
 #[derive(Debug, Serialize)]
 struct ClientInfo {
@@ -28,11 +29,25 @@ struct GatewayCommandResult {
     error: Option<String>,
 }
 
-fn runtime_root() -> PathBuf {
-    std::env::var_os("LINGORA_RUNTIME_ROOT")
-        .map(PathBuf::from)
-        .or_else(|| std::env::current_dir().ok())
-        .unwrap_or_else(|| PathBuf::from("."))
+fn runtime_root(app: Option<&tauri::AppHandle>) -> PathBuf {
+    if let Some(root) = std::env::var_os("LINGORA_RUNTIME_ROOT").map(PathBuf::from) {
+        return root;
+    }
+
+    if let Some(resource_root) = app
+        .and_then(|handle| handle.path().resource_dir().ok())
+        .map(|root| root.join("runtime"))
+    {
+        if resource_root.join("scripts/start-gateway.mjs").is_file() {
+            return resource_root;
+        }
+    }
+
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
+
+fn node_binary() -> String {
+    std::env::var("LINGORA_NODE_BINARY").unwrap_or_else(|_| "node".to_string())
 }
 
 fn gateway_action_args(action: &str) -> Option<Vec<&'static str>> {
@@ -62,7 +77,11 @@ fn run_gateway_action(action: &str, root: &Path) -> GatewayCommandResult {
         };
     }
 
-    match Command::new("node").current_dir(root).args(args).output() {
+    match Command::new(node_binary())
+        .current_dir(root)
+        .args(args)
+        .output()
+    {
         Ok(result) => {
             let stdout = String::from_utf8_lossy(&result.stdout).trim().to_string();
             let stderr = String::from_utf8_lossy(&result.stderr).trim().to_string();
@@ -147,27 +166,33 @@ async fn gateway_health(base_url: Option<String>) -> GatewayHealth {
 }
 
 #[tauri::command]
-async fn gateway_start() -> GatewayCommandResult {
-    tauri::async_runtime::spawn_blocking(|| run_gateway_action("start", &runtime_root()))
-        .await
-        .unwrap_or_else(|error| GatewayCommandResult {
-            ok: false,
-            action: "start".to_string(),
-            output: String::new(),
-            error: Some(error.to_string()),
-        })
+async fn gateway_start(app: tauri::AppHandle) -> GatewayCommandResult {
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = runtime_root(Some(&app));
+        run_gateway_action("start", &root)
+    })
+    .await
+    .unwrap_or_else(|error| GatewayCommandResult {
+        ok: false,
+        action: "start".to_string(),
+        output: String::new(),
+        error: Some(error.to_string()),
+    })
 }
 
 #[tauri::command]
-async fn gateway_stop() -> GatewayCommandResult {
-    tauri::async_runtime::spawn_blocking(|| run_gateway_action("stop", &runtime_root()))
-        .await
-        .unwrap_or_else(|error| GatewayCommandResult {
-            ok: false,
-            action: "stop".to_string(),
-            output: String::new(),
-            error: Some(error.to_string()),
-        })
+async fn gateway_stop(app: tauri::AppHandle) -> GatewayCommandResult {
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = runtime_root(Some(&app));
+        run_gateway_action("stop", &root)
+    })
+    .await
+    .unwrap_or_else(|error| GatewayCommandResult {
+        ok: false,
+        action: "stop".to_string(),
+        output: String::new(),
+        error: Some(error.to_string()),
+    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
