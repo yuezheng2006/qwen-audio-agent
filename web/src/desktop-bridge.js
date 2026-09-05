@@ -7,3 +7,9 @@ export async function readNativeClientInfo() {
   const { invoke } = await import('@tauri-apps/api/core')
   return invoke('client_info')
 }
+
+export async function readNativeGatewayHealth(baseUrl) {
+  if (!isNativeClient()) return null
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('gateway_health', { base_url: baseUrl })
+}
