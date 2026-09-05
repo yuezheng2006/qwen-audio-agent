@@ -295,6 +295,18 @@ function ClonePage({
 
   const tips = qualityTipsFrom(voiceCapabilities)
 
+  const run = async operation => {
+    setBusy(true)
+    setError('')
+    try {
+      await operation()
+    } catch (err) {
+      setError(err?.message || '操作失败，请稍后重试。')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const cloneRecordedVoice = async () => {
     if (!sampleBlob) return
     await run(async () => {
