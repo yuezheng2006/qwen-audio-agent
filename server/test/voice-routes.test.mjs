@@ -404,6 +404,31 @@ test('PATCH /api/voice/profiles/:id updates favorite without restart', async () 
   })
 })
 
+test('DELETE /api/voice/profiles/:id removes a local profile', async () => {
+  let removed = null
+  await withServer(app => {
+    registerVoiceRoutes(app, {
+      voiceStudioService: mockService({
+        remove(ownerId, id) {
+          assert.equal(ownerId, 'owner-a')
+          assert.equal(id, 'p2')
+          removed = id
+          return { status: 'ok', profile: { id, label: 'fish-import' } }
+        },
+      }),
+      getCascadeTts: () => ({ apiKey: 'k', model: 'm' }),
+      synthesizePreview: async () => Buffer.from('RIFF'),
+    })
+  }, async base => {
+    const res = await fetch(`${base}/api/voice/profiles/p2`, { method: 'DELETE' })
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    assert.equal(body.status, 'ok')
+    assert.equal(body.profile.id, 'p2')
+    assert.equal(removed, 'p2')
+  })
+})
+
 test('GET /api/voice/capabilities returns provider preview matrix', async () => {
   await withServer(app => {
     registerVoiceRoutes(app, {

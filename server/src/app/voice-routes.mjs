@@ -178,6 +178,30 @@ export function registerVoiceRoutes(app, {
     }
   })
 
+  app.delete('/api/voice/profiles/:id', (req, res) => {
+    if (!voiceStudioService) return unavailable(res)
+    try {
+      const ownerId = req.identity?.ownerId
+      const profileId = String(req.params.id || '').trim()
+      let result = voiceStudioService.remove(ownerId, profileId)
+      if (
+        result.error_code === 'profile_not_found'
+        && String(ownerId) === 'user_personal'
+      ) {
+        result = voiceStudioService.remove('local', profileId)
+      }
+      if (result.status !== 'ok') {
+        return res.status(result.error_code === 'profile_not_found' ? 404 : 400).json({
+          error: result.user_message || '删除失败',
+          error_code: result.error_code,
+        })
+      }
+      res.json(result)
+    } catch (error) {
+      res.status(500).json({ error: error.message })
+    }
+  })
+
   app.get('/api/voice/capabilities', (req, res) => {
     if (!voiceStudioService) return unavailable(res)
     try {

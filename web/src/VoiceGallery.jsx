@@ -279,6 +279,19 @@ export default function VoiceGallery({
     })
   }
 
+  const deleteVoice = async profile => {
+    const name = friendlyVoiceName(profile)
+    if (!globalThis.confirm?.(`删除音色“${name}”？此操作只删除本机 Profile，不会撤销远端 provider 的 Voice ID。`)) return
+    await run(async () => {
+      const response = await fetch(`api/voice/profiles/${encodeURIComponent(profile.id)}`, {
+        method: 'DELETE',
+      })
+      await readJson(response)
+      if (previewingId === profile.id) stopPreview()
+      await refreshVoiceProfiles()
+    })
+  }
+
   const currentName = (() => {
     const voiceId = activeVoice?.voice || runtime?.cascade?.voice
     const matched = organizeVoiceProfiles(voiceProfiles, { showAll: true })
@@ -448,6 +461,19 @@ export default function VoiceGallery({
                           }}
                         >
                           {isActive ? '已选' : '选用'}
+                        </button>
+                        <button
+                          type="button"
+                          className="voice-icon-btn voice-delete-btn"
+                          disabled={busy || isActive}
+                          aria-label={`删除 ${name}`}
+                          title={isActive ? '当前使用中的音色不能删除' : '删除音色'}
+                          onClick={event => {
+                            event.stopPropagation()
+                            deleteVoice(profile)
+                          }}
+                        >
+                          ×
                         </button>
                       </div>
                     </article>

@@ -312,6 +312,14 @@ export function createVoiceStudioService({
       }
     },
 
+    remove(ownerId, id) {
+      const profileId = String(id || '').trim()
+      if (!profileId) return failure('profile_not_found', '未找到音色 profile。')
+      const row = store.remove(ownerId, profileId)
+      if (!row) return failure('profile_not_found', '未找到音色 profile。')
+      return { status: 'ok', profile: serializeProfile(row) }
+    },
+
     capabilities() {
       const entries = providers instanceof Map
         ? [...providers.entries()]

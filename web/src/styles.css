@@ -1750,6 +1750,9 @@ article.user .message-body .inline-code { background: #5e44c9; color: #f0eaff; }
   outline: 0;
   transform: translateY(-1px);
 }
+.voice-delete-btn { color: #a79eae; font-size: 17px; line-height: 1; }
+.voice-delete-btn:hover:not(:disabled) { color: #ff9b9b; border-color: #ff858566; background: #ff858512; }
+.voice-delete-btn:disabled { opacity: .38; }
 .voice-studio-tile:active { transform: translateY(0); }
 .voice-studio-tile-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .voice-studio-tile-title { font-size: 14px; font-weight: 600; line-height: 1.35; }

@@ -228,6 +228,15 @@ export function createVoiceProfileStore({
       return next
     },
 
+    remove(ownerId, id) {
+      const profiles = load(ownerId)
+      const index = profiles.findIndex(item => item.id === String(id))
+      if (index < 0) return null
+      const [removed] = profiles.splice(index, 1)
+      save(ownerId, profiles)
+      return removed
+    },
+
     get(ownerId, id) {
       const needle = String(id || '')
       if (!needle) return null

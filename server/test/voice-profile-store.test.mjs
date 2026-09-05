@@ -31,3 +31,17 @@ test('voice profile store upsert list and serialize remote_voice_id', () => {
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+test('voice profile store removes one local asset without affecting other profiles', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'voice-profiles-delete-'))
+  try {
+    const store = createVoiceProfileStore({ dir })
+    store.upsert('owner', { id: 'keep', label: 'Keep', provider: 'local' })
+    store.upsert('owner', { id: 'remove', label: 'Remove', provider: 'local' })
+    assert.equal(store.remove('owner', 'remove').id, 'remove')
+    assert.equal(store.remove('owner', 'missing'), null)
+    assert.deepEqual(store.list('owner').map(item => item.id), ['keep'])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
