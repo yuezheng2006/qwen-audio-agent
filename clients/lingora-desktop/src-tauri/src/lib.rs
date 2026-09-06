@@ -43,7 +43,17 @@ fn runtime_root(app: Option<&tauri::AppHandle>) -> PathBuf {
         }
     }
 
-    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+    let current = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    for candidate in [
+        current.clone(),
+        current.join("../.."),
+        current.join("../../.."),
+    ] {
+        if candidate.join("scripts/start-gateway.mjs").is_file() {
+            return candidate;
+        }
+    }
+    current
 }
 
 fn node_binary() -> String {
