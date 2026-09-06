@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
+import {
+  ChevronDown,
+  FileText,
+  History,
+  Play,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Volume2,
+} from 'lucide-react'
 import VoiceGallery from './VoiceGallery.jsx'
 import MediaWorkspacePanel from './MediaWorkspacePanel.jsx'
 import ModelCataloguePanel from './ModelCataloguePanel.jsx'
 import {
-  VOICE_STUDIO_TILES,
-  resolveVoiceStudioView,
-} from './voice-studio-launchpad.js'
+  friendlyVoiceName,
+  organizeVoiceProfiles,
+} from './voice-gallery.js'
+import { resolveVoiceStudioView } from './voice-studio-launchpad.js'
 import {
   blobToDataUrl,
   clampClipRange,
@@ -426,20 +437,175 @@ function ClonePage({
   )
 }
 
-function statusLabel(tile) {
-  if (tile.status === 'live') return '打开'
-  if (tile.status === 'jump') return '设置'
-  return '稍后'
+function audioDataUrl(base64) {
+  return `data:audio/wav;base64,${base64}`
+}
+
+function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
+  const [profiles, setProfiles] = useState([])
+  const [selectedProfile, setSelectedProfile] = useState(null)
+  const [query, setQuery] = useState('')
+  const [text, setText] = useState('')
+  const [voiceMode, setVoiceMode] = useState('voice')
+  const [history, setHistory] = useState([])
+  const [historyFilter, setHistoryFilter] = useState('all')
+  const [language, setLanguage] = useState('auto')
+  const [steps, setSteps] = useState(16)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('api/voice/profiles')
+      .then(response => response.ok ? response.json() : null)
+      .then(payload => {
+        if (cancelled || !payload) return
+        const nextProfiles = organizeVoiceProfiles(payload.profiles || [], { showAll: true })
+          .filter(profile => ['ready', 'confirmed'].includes(profile.status))
+        setProfiles(nextProfiles)
+        const activeId = payload.active?.voice
+        const active = nextProfiles.find(profile => profile.remote_voice_id === activeId)
+        setSelectedProfile(active || nextProfiles[0] || null)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  const visibleProfiles = profiles.filter(profile => {
+    const value = [friendlyVoiceName(profile), profile.provider, profile.label]
+      .join(' ')
+      .toLowerCase()
+    return value.includes(query.trim().toLowerCase())
+  })
+  const selectedName = selectedProfile ? friendlyVoiceName(selectedProfile) : (
+    runtime?.cascade?.voiceLabel || runtime?.realtimeVoiceLabel || '未选择声音'
+  )
+
+  const generateAudio = async () => {
+    const draft = text.trim()
+    if (!draft || !selectedProfile || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch('api/voice/narrate', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: draft,
+          profile_id: selectedProfile.id,
+          voice: selectedProfile.remote_voice_id,
+          ...(language !== 'auto' ? { language } : {}),
+        }),
+      })
+      const payload = await readJson(response)
+      const url = audioDataUrl(payload.audio_base64)
+      setHistory(current => [{
+        id: `${Date.now()}-${Math.random()}`,
+        text: draft,
+        voice: selectedName,
+        url,
+        createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }, ...current])
+    } catch (err) {
+      setError(err?.message || '生成音频失败，请检查声音配置。')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="studio-workbench">
+      <aside className="studio-voices-panel">
+        <div className="studio-section-heading">
+          <div>
+            <span className="studio-eyebrow">当前声音</span>
+            <strong>{selectedName}</strong>
+          </div>
+          <button type="button" className="studio-icon-button" onClick={onOpenGallery} aria-label="打开声音库">
+            <ChevronDown size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <p className="studio-voice-hint">选择一个声音，或拖入音频创建新的声音。</p>
+
+        <div className="studio-subheading"><span>设计的声音</span><button type="button" onClick={onOpenClone}><Plus size={14} /> 新建</button></div>
+        <label className="studio-search">
+          <Search size={14} aria-hidden="true" />
+          <input value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索…" />
+        </label>
+        <div className="studio-voice-list">
+          {visibleProfiles.slice(0, 8).map(profile => {
+            const active = selectedProfile?.id === profile.id
+            return (
+              <button
+                type="button"
+                key={profile.id}
+                className={`studio-voice-option${active ? ' active' : ''}`}
+                onClick={() => setSelectedProfile(profile)}
+              >
+                <span className="studio-voice-avatar">{friendlyVoiceName(profile).slice(0, 1)}</span>
+                <span><strong>{friendlyVoiceName(profile)}</strong><small>{profile.provider || '本地音色'}</small></span>
+              </button>
+            )
+          })}
+          {!visibleProfiles.length && <div className="studio-empty-voices">还没有可用声音<br /><button type="button" onClick={onOpenClone}>创建我的声音</button></div>}
+        </div>
+        <div className="studio-left-empty">
+          <strong>还没有设计声音</strong>
+          <span>在这里创建或管理你的声音</span>
+        </div>
+      </aside>
+
+      <main className="studio-editor-panel">
+        <div className="studio-editor-heading"><span><FileText size={16} /> 文稿</span><button type="button" className="studio-quiet-button"><Plus size={14} /> 插入 <ChevronDown size={13} /></button></div>
+        <textarea
+          className="studio-script-editor"
+          value={text}
+          onChange={event => setText(event.target.value)}
+          placeholder="在这里输入或粘贴要生成的文稿…"
+          aria-label="文稿"
+        />
+        <div className="studio-synthesis-controls">
+          <div className="studio-control-heading"><span><Volume2 size={16} /> 语音</span><div className="studio-segmented-control">
+            <button type="button" className={voiceMode === 'voice' ? 'active' : ''} onClick={() => setVoiceMode('voice')}>从音频</button>
+            <button type="button" className={voiceMode === 'design' ? 'active' : ''} onClick={() => setVoiceMode('design')}>通过设计</button>
+            <button type="button" className={voiceMode === 'convert' ? 'active' : ''} onClick={() => setVoiceMode('convert')}>转换</button>
+          </div></div>
+          <input className="studio-style-input" placeholder="例如：中年男性，低音调，四川话" aria-label="声音描述" />
+          <div className="studio-advanced-row">
+            <label><span>◎</span><select value={language} onChange={event => setLanguage(event.target.value)}><option value="auto">Auto</option><option value="zh">中文</option><option value="en">English</option></select></label>
+            <label className="studio-steps"><SlidersHorizontal size={15} /> 步数 <input type="range" min="4" max="32" value={steps} onChange={event => setSteps(event.target.value)} /><output>{steps}</output></label>
+            <button type="button" className="studio-advanced-toggle" onClick={() => setAdvancedOpen(value => !value)}><SlidersHorizontal size={14} /> 高级参数 <ChevronDown className={advancedOpen ? 'up' : ''} size={14} /></button>
+          </div>
+          {advancedOpen && <div className="studio-advanced-panel">本地优先渲染 · {runtime?.cascade?.ttsProvider || '默认引擎'} · {selectedName}</div>}
+          {error && <p className="settings-error">{error}</p>}
+          <button type="button" className="studio-generate-button" disabled={busy || !text.trim() || !selectedProfile} onClick={generateAudio}>
+            <Play size={17} fill="currentColor" /> {busy ? '生成中…' : '生成音频'}
+          </button>
+        </div>
+      </main>
+
+      <aside className="studio-history-panel">
+        <div className="studio-history-heading"><span><History size={16} /> 历史</span></div>
+        <div className="studio-history-tabs">
+          {['all', 'clone', 'design', 'saved'].map(filter => <button type="button" key={filter} className={historyFilter === filter ? 'active' : ''} onClick={() => setHistoryFilter(filter)}>{filter === 'all' ? 'All' : filter === 'clone' ? 'Clone' : filter === 'design' ? 'Design' : '已加星'}</button>)}
+        </div>
+        {!history.length ? <div className="studio-history-empty">这里还没有内容——你的生成结果将显示在右侧。</div> : (
+          <div className="studio-history-list">{history.map(item => <article key={item.id} className="studio-history-item"><div><strong>{item.voice}</strong><small>{item.createdAt}</small></div><p>{item.text}</p><audio controls src={item.url} /></article>)}</div>
+        )}
+      </aside>
+    </div>
+  )
 }
 
 export default function VoiceStudioPanel({
   open,
-  onClose,
   runtime,
   onRuntimeChange,
   onModeSwitching,
-  onOpenSettings,
-  onOpenReading,
   initialView = 'launchpad',
 }) {
   const [view, setView] = useState(() => resolveVoiceStudioView(initialView))
@@ -461,25 +627,6 @@ export default function VoiceStudioPanel({
           ? '模型目录'
           : '语音工作室'
 
-  const onTile = (tile) => {
-    if (tile.status === 'soon') return
-    if (tile.jump === 'reading') {
-      onClose?.()
-      onOpenReading?.('shelf')
-      return
-    }
-    if (tile.status === 'jump' && tile.jump === 'mode') {
-      onClose?.()
-      onOpenSettings?.('mode')
-      return
-    }
-    if (tile.status === 'jump' && tile.jump === 'catalogue') {
-      setView('catalogue')
-      return
-    }
-    if (tile.view) setView(tile.view)
-  }
-
   return (
     <div className="settings-drawer voice-studio-drawer" role="dialog" aria-label="语音工作室">
       <div className="settings-panel settings-panel-wide voice-studio-panel">
@@ -498,9 +645,6 @@ export default function VoiceStudioPanel({
             )}
             <h2>{title}</h2>
           </div>
-          <button type="button" className="voice-text-btn" onClick={onClose}>
-            关闭
-          </button>
         </header>
 
         <Tabs.Root
@@ -518,33 +662,11 @@ export default function VoiceStudioPanel({
         </Tabs.Root>
 
         {view === 'launchpad' && (
-          <div className="voice-studio-body">
-            <p className="voice-studio-lead">你想用声音做什么？</p>
-            <p className="voice-studio-sublead">从一个简单任务开始，随时可以返回继续聊天。</p>
-            <div className="voice-studio-launchpad" role="list">
-              {VOICE_STUDIO_TILES.filter(tile => tile.status !== 'soon').map(tile => (
-                <button
-                  key={tile.id}
-                  type="button"
-                  role="listitem"
-                  className={[
-                    'voice-studio-tile',
-                    tile.status,
-                  ].filter(Boolean).join(' ')}
-                  disabled={tile.status === 'soon'}
-                  onClick={() => onTile(tile)}
-                >
-                  <span className="voice-studio-tile-top">
-                    <span className="voice-studio-tile-title">{tile.title}</span>
-                    <span className={`voice-studio-tile-status ${tile.status}`}>
-                      {statusLabel(tile)}
-                    </span>
-                  </span>
-                  <span className="voice-studio-tile-blurb">{tile.blurb}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <StudioWorkbench
+            runtime={runtime}
+            onOpenGallery={() => setView('gallery')}
+            onOpenClone={() => setView('clone')}
+          />
         )}
 
         {view === 'gallery' && (

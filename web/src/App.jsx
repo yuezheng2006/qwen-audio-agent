@@ -1517,7 +1517,6 @@ export default function App() {
       />}
       <VoiceStudioPanel
         open={showVoiceStudio}
-        onClose={() => setShowVoiceStudio(false)}
         runtime={runtimeSnapshot}
         onRuntimeChange={setRuntimeSnapshot}
         onModeSwitching={() => {}}
