@@ -2469,11 +2469,15 @@ header select.frontend-provider option {
 .voice-studio-app .voice-studio-kicker { display: none; }
 .voice-studio-app .voice-studio-tabs { margin: 0 0 18px; }
 .voice-studio-app .voice-studio-tabs [role='tablist'] {
-  width: fit-content;
-  margin-left: auto;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
   border: 0;
   background: transparent;
 }
+.voice-studio-app .voice-studio-tabs [role='tablist']::-webkit-scrollbar { display: none; }
 .voice-studio-app .voice-studio-tabs [role='tab'] { color: #888; }
 .voice-studio-app .voice-studio-tabs [role='tab'][data-state='active'] {
   color: #e7b0c5;
