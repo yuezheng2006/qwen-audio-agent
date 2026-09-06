@@ -187,6 +187,9 @@ async function startGateway(modeArg) {
     'CONTENT_DIR',
     'KNOWLEDGE_DIR',
     'SUPPORT_INBOUND_TOKEN',
+    'VOICE_SAMPLE_PUBLIC_BASE_URL',
+    'QWEN_AUDIO_AGENT_BACKEND_OWNERSHIP',
+    'QWEN_AUDIO_AGENT_BACKEND_PERMISSION_MODE',
   ]) {
     if (fileEnv[key] !== undefined && fileEnv[key] !== '') {
       childEnv[key] = fileEnv[key]
