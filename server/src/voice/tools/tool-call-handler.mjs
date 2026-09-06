@@ -16,6 +16,7 @@ import {
   WEB_SEARCH_TOOL_NAME,
   FETCH_URL_TOOL_NAME,
   KNOWLEDGE_TOOL_NAME,
+  KNOWLEDGE_SEARCH_TOOL_NAME,
   frontendToolRegistry,
   RECALL_TOOL_NAME,
   FRONTEND_RECALL_CAPABILITY,
@@ -216,6 +217,7 @@ export class ToolCallHandler {
       [WEB_SEARCH_TOOL_NAME]: context => this.webSearch(context),
       [FETCH_URL_TOOL_NAME]: context => this.fetchUrl(context),
       [KNOWLEDGE_TOOL_NAME]: context => this.knowledge(context),
+      [KNOWLEDGE_SEARCH_TOOL_NAME]: context => this.knowledge(context),
       [RECALL_TOOL_NAME]: ({ callId, turnId, args }) => (
         this.recall(callId, turnId, args)
       ),

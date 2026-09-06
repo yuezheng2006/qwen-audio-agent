@@ -17,6 +17,7 @@ import {
 } from './tools/spawn-thinking-tool.mjs'
 import { ClientActionName } from '../client/client-action-port.mjs'
 import { getActiveCapabilityRegistry } from '../capabilities/active.mjs'
+import { filterRealtimeTools } from '../conversation/workspace.mjs'
 
 export { SPAWN_THINKING_TOOL_NAME } from './tools/spawn-thinking-tool.mjs'
 export const SCHEDULE_REMINDER_TOOL_NAME = 'schedule_reminder'
@@ -33,6 +34,9 @@ export const ENTER_SLEEP_TOOL_NAME = 'enter_sleep'
 export const WEB_SEARCH_TOOL_NAME = 'web_search'
 export const FETCH_URL_TOOL_NAME = 'fetch_url'
 export const KNOWLEDGE_TOOL_NAME = 'knowledge'
+// Legacy support clients used this name before knowledge became the shared
+// provider-agnostic tool. Keep the alias at the workspace boundary only.
+export const KNOWLEDGE_SEARCH_TOOL_NAME = 'knowledge_search'
 export const RECALL_TOOL_NAME = 'recall'
 // recall 依赖会话摘要池或资料库，两者都可能没启用。用 capability 声明而不是
 // 在 gateway 里手工拼工具数组 —— 后者会绕过 registry 的策略过滤。
@@ -465,12 +469,31 @@ export function frontendTools(agentContext = {}) {
       ? withSpawnThinkingDescription(spawnThinkingDescription)
       : tool
   ))
-  const dynamic = dynamicFrontendTools(agentContext)
-  if (dynamic.length) return [...tools, ...dynamic]
-  return tools.length === TOOLS.length
-    && tools.every((tool, index) => tool === TOOLS[index])
-    ? TOOLS
+  const isSupportWorkspace = String(agentContext?.workspace || '').trim().toLowerCase() === 'support'
+  const workspaceTools = isSupportWorkspace
+    ? tools.map(tool => {
+      if (tool?.function?.name !== KNOWLEDGE_TOOL_NAME) return tool
+      return {
+        ...tool,
+        function: { ...tool.function, name: KNOWLEDGE_SEARCH_TOOL_NAME },
+      }
+    })
     : tools
+  if (isSupportWorkspace
+    && !workspaceTools.some(tool => tool?.function?.name === KNOWLEDGE_SEARCH_TOOL_NAME)) {
+    workspaceTools.push({
+      ...knowledgeTool,
+      function: { ...knowledgeTool.function, name: KNOWLEDGE_SEARCH_TOOL_NAME },
+    })
+  }
+  const dynamic = dynamicFrontendTools(agentContext)
+  const exposedTools = filterRealtimeTools([...workspaceTools, ...dynamic], agentContext.workspace)
+  if (dynamic.length) return exposedTools
+  if (exposedTools.length === TOOLS.length
+    && exposedTools.every((tool, index) => tool === TOOLS[index])) {
+    return TOOLS
+  }
+  return exposedTools
 }
 
 // Compatibility entrypoint for the local Cascade provider and older clients.
