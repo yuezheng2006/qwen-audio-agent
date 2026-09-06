@@ -37,8 +37,7 @@ For a local checkout, the host expects the repository Node runtime and its
 installed dependencies. `LINGORA_RUNTIME_ROOT` can point to another Gateway
 checkout, and `LINGORA_NODE_BINARY` can select a specific Node executable.
 
-The debug bundle includes the Gateway source resources and produces a working
-`.app`/`.dmg`. A release installer still needs the production Node dependency
-pack (or a compiled Gateway sidecar) before it can run fully offline on a
-clean machine; that packaging step is intentionally kept separate from the
-Rust host and is the next release gate.
+The runtime staging step also copies the platform's Node executable into the
+bundle (`runtime/node` or `runtime/node.exe`). A release build therefore does
+not require Node to be preinstalled on the target machine; each platform's
+build pipeline must stage its own native Node binary.

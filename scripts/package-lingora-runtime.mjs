@@ -6,7 +6,7 @@
  * silently depending on the repository's development node_modules.
  */
 
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -34,6 +34,10 @@ for (const directory of ['scripts', 'server', 'shared', 'config']) {
 }
 
 writeFileSync(join(target, 'package.json'), `${JSON.stringify(runtimePackage, null, 2)}\n`)
+
+const bundledNode = join(target, process.platform === 'win32' ? 'node.exe' : 'node')
+cpSync(process.execPath, bundledNode, { force: true })
+if (process.platform !== 'win32') chmodSync(bundledNode, 0o755)
 
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const install = spawnSync(npm, [

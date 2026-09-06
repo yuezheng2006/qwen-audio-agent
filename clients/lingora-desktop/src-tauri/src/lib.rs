@@ -56,8 +56,15 @@ fn runtime_root(app: Option<&tauri::AppHandle>) -> PathBuf {
     current
 }
 
-fn node_binary() -> String {
-    std::env::var("LINGORA_NODE_BINARY").unwrap_or_else(|_| "node".to_string())
+fn node_binary(root: &Path) -> PathBuf {
+    if let Some(binary) = std::env::var_os("LINGORA_NODE_BINARY") {
+        return PathBuf::from(binary);
+    }
+    let bundled = root.join(if cfg!(windows) { "node.exe" } else { "node" });
+    if bundled.is_file() {
+        return bundled;
+    }
+    PathBuf::from(if cfg!(windows) { "node.exe" } else { "node" })
 }
 
 fn gateway_action_args(action: &str) -> Option<Vec<&'static str>> {
@@ -87,7 +94,7 @@ fn run_gateway_action(action: &str, root: &Path) -> GatewayCommandResult {
         };
     }
 
-    match Command::new(node_binary())
+    match Command::new(node_binary(root))
         .current_dir(root)
         .args(args)
         .output()
