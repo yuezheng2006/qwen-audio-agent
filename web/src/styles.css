@@ -3034,3 +3034,72 @@ header select.frontend-provider option {
   .catalogue-engine-row .catalogue-role { display: none; }
   .catalogue-model-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Dense authoring pass: keep the VoiceStudio hierarchy while reclaiming
+   vertical space for the actual script, waveform and result controls. */
+.voice-studio-app .workspace-voice-studio {
+  padding: 0 12px 12px;
+}
+.voice-studio-app .workspace-voice-studio > .voice-studio-drawer > .voice-studio-panel {
+  padding: 12px 0 18px;
+}
+.voice-studio-app .voice-studio-header {
+  min-height: 36px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+}
+.voice-studio-app .voice-studio-tabs { margin-bottom: 10px; }
+.voice-studio-app .voice-clone-body {
+  gap: 10px;
+}
+.voice-studio-app .voice-clone-callout {
+  padding: 9px 12px;
+}
+.voice-studio-app .voice-clone-callout p { margin-top: 3px; }
+.voice-studio-app .voice-recorder,
+.voice-studio-app .voice-recorded-clone-form,
+.voice-studio-app .voice-clone-form {
+  padding: 11px 12px;
+  border-radius: 8px;
+}
+.voice-studio-app .voice-recorder { gap: 9px; }
+.voice-studio-app .voice-recorder-heading p { margin-top: 2px; }
+.voice-studio-app .voice-clip-editor { gap: 6px; }
+.voice-studio-app .voice-clip-actions { gap: 7px; }
+.voice-studio-app .voice-primary-btn,
+.voice-studio-app .voice-secondary-btn,
+.voice-studio-app .voice-danger-btn { min-height: 30px; padding: 5px 10px; }
+.voice-studio-app .voice-field { gap: 5px; }
+.voice-studio-app .voice-tips-fold { padding: 7px 10px; }
+.voice-studio-app .studio-workbench {
+  min-height: calc(100dvh - 112px);
+  gap: 16px;
+}
+.voice-studio-app .studio-voices-panel { padding-bottom: 8px; }
+.voice-studio-app .studio-voice-hint { margin: 12px 0 20px; }
+.voice-studio-app .studio-subheading { margin-bottom: 8px; }
+.voice-studio-app .studio-search { height: 34px; padding-inline: 10px; }
+.voice-studio-app .studio-editor-heading,
+.voice-studio-app .studio-history-heading { margin-bottom: 7px; }
+.voice-studio-app .studio-script-editor {
+  min-height: 280px;
+  padding: 14px;
+  line-height: 1.55;
+}
+.voice-studio-app .studio-synthesis-controls { margin-top: 18px; }
+.voice-studio-app .studio-style-input {
+  height: 40px;
+  margin-top: 7px;
+  padding-inline: 14px;
+}
+.voice-studio-app .studio-advanced-row { gap: 14px; margin-top: 8px; }
+.voice-studio-app .studio-segmented-control button { padding: 6px 12px; }
+.voice-studio-app .studio-generate-button {
+  height: 44px;
+  margin-top: 10px;
+}
+.voice-studio-app .studio-history-tabs { gap: 5px; margin: 8px 0 22px; }
+.voice-studio-app .studio-history-tabs button { padding: 5px 9px; }
+.voice-studio-app .studio-history-list { gap: 7px; }
+.voice-studio-app .studio-history-item { padding: 9px; }
+.voice-studio-app .studio-history-item p { margin: 5px 0; }
