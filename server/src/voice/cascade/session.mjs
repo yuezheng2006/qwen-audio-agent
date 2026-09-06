@@ -118,6 +118,16 @@ export class CascadeSession {
     }
     if (event.type === 'session.update') {
       this.session = { ...this.session, ...(event.session || {}) }
+      const voice = String(this.session.voice || '').trim()
+      if (voice) {
+        // A Gateway voice change reconnects this local session. Keep the
+        // selected voice at the session boundary without mutating the shared
+        // process-wide cascade configuration.
+        this.config = {
+          ...this.config,
+          tts: { ...this.config.tts, voice },
+        }
+      }
       this.emit({ type: 'session.updated', session: this.session })
     } else if (event.type === 'input_audio_buffer.append') {
       this.handleAudio(decodePcmBase64(event.audio))

@@ -152,6 +152,7 @@ export class ToolCallHandler {
     frontendRetrieval = null,
     frontendKnowledge = null,
     frontendToolSources = [],
+    capabilityRegistry = null,
     turnCitations = null,
     sessionDigests = null,
   }) {
@@ -180,6 +181,7 @@ export class ToolCallHandler {
     this.frontendRetrieval = frontendRetrieval
     this.frontendKnowledge = frontendKnowledge
     this.frontendToolSources = frontendToolSources
+    this.capabilityRegistry = capabilityRegistry
     this.turnCitations = turnCitations
     this.activeToolEntries = new Map()
     this.activeToolDebugEntries = new Map()
@@ -1049,6 +1051,19 @@ export class ToolCallHandler {
     this.activeToolDebugEntries.set(callId, debug)
     this.emitToolCallDebug(debug)
     try {
+      if (!external && !tool && this.capabilityRegistry?.has?.(toolName)) {
+        const output = await this.capabilityRegistry.dispatch(toolName, args, {
+          callId,
+          turnId,
+          turnGeneration: generation,
+          event,
+          callContext,
+          ownerId: this.ownerId,
+          sessionId: this.sessionId,
+        })
+        await this.sendOutput(callId, output, turnId)
+        return { handled: true, executed: true, value: output }
+      }
       if (external) {
         return await this.executeExternalToolCall(external, {
           callId,

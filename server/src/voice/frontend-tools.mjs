@@ -16,6 +16,7 @@ import {
   withSpawnThinkingDescription,
 } from './tools/spawn-thinking-tool.mjs'
 import { ClientActionName } from '../client/client-action-port.mjs'
+import { getActiveCapabilityRegistry } from '../capabilities/active.mjs'
 
 export { SPAWN_THINKING_TOOL_NAME } from './tools/spawn-thinking-tool.mjs'
 export const SCHEDULE_REMINDER_TOOL_NAME = 'schedule_reminder'
@@ -476,7 +477,17 @@ export function frontendTools(agentContext = {}) {
 // Keep the implementation centralized in frontendTools so both paths expose
 // the same builtin and dynamically configured tools.
 export function getRealtimeTools(agentContext = {}) {
-  return frontendTools(agentContext)
+  const tools = frontendTools(agentContext)
+  const registry = getActiveCapabilityRegistry()
+  if (!registry?.listRealtimeTools) return tools
+  const names = new Set(tools.map(tool => tool.function?.name))
+  return [
+    ...tools,
+    ...registry.listRealtimeTools().filter(tool => {
+      const name = tool?.function?.name
+      return name && !names.has(name)
+    }),
+  ]
 }
 
 export const resultResponseInstructions = [
@@ -516,6 +527,7 @@ export const inputRequestResponseInstructions = [
 ].join(' ')
 
 export function buildFrontendInstructions(agentContext = {}) {
+  const skills = getActiveCapabilityRegistry()?.skillsPrompt?.() || ''
   return [
     loadFrontendPrompt(),
     '# Assistant Profile',
@@ -523,5 +535,6 @@ export function buildFrontendInstructions(agentContext = {}) {
     resolveAssistantProfile(agentContext),
     '</assistant_profile>',
     buildFrontendContext(agentContext),
-  ].join('\n\n')
+    skills,
+  ].filter(Boolean).join('\n\n')
 }

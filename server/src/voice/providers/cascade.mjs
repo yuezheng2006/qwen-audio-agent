@@ -18,6 +18,11 @@ export const cascadeProvider = {
   outputSampleRate: 24000,
   protocol: openAiCompatibleProtocol,
 
+  capabilities: {
+    // Cascade recreates its local TTS session when the client changes voice.
+    sessionOutputVoice: true,
+  },
+
   model: () => [
     config.cascade.stt.model,
     config.cascade.llm.model,
@@ -38,10 +43,13 @@ export const cascadeProvider = {
   headers: () => ({}),
   classifyError: message => dashscopeProvider.classifyError(message),
 
-  buildSession: ({ agentContext }) => ({
+  buildSession: ({ agentContext, sessionOptions }) => ({
     instructions: buildFrontendInstructions(agentContext),
     tools: getRealtimeTools(),
     modalities: agentContext?.textOnly === true ? ['text'] : ['text', 'audio'],
+    ...(String(sessionOptions?.voice || '').trim()
+      ? { voice: String(sessionOptions.voice).trim() }
+      : {}),
   }),
 
   buildSpeakResponse: (content, { textOnly = false } = {}) => ({
