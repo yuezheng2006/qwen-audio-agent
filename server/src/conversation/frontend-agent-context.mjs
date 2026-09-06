@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { config } from '../core/config.mjs'
 import { canonicalScope, isDirectiveScope } from '../core/memory-scopes.mjs'
 import { recentConversationMessages } from '../../../shared/conversation-history.mjs'
+import { episodeSection } from './episode/context.mjs'
 
 const PROMPT_FILE = 'PROMPT.md'
 const ASSISTANT_FILE = 'ASSISTANT.md'
@@ -166,6 +167,8 @@ export function buildRecentConversationContext(messages = []) {
 export function buildFrontendContext({
   client = {},
   memories = [],
+  recalledEpisodes = [],
+  now = new Date(),
 } = {}) {
   const normalizedClient = normalizeClientContext(client)
   const runtimeContext = [
@@ -181,6 +184,11 @@ export function buildFrontendContext({
   return [
     userPreferencesSection(memories),
     memorySection(memories),
+    episodeSection(recalledEpisodes, {
+      timeZone: normalizedClient.timeZone,
+      locale: normalizedClient.locale,
+      now,
+    }).join('\n'),
     runtimeContext,
   ].filter(Boolean).join('\n\n')
 }
