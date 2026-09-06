@@ -90,17 +90,14 @@ export function resolveBackendModels(env = process.env) {
     common,
     openCode: common ? `alibaba-cn/${name}` : '',
     openClaw: common ? `bailian/${name}` : '',
-    qoder: name,
-    qwen: name,
+    qoder: common,
+    qwen: common,
     kimi: common,
     hermes: common,
-    codeBuddy: name,
-    codex: name,
+    codeBuddy: common,
+    codex: common,
     claude: common,
-    deepSeekHarness: String(
-      env.DEEPSEEK_HARNESS_MODEL
-      || (name.startsWith('deepseek-') ? name : ''),
-    ).trim(),
+    deepSeekHarness: String(env.DEEPSEEK_HARNESS_MODEL || '').trim(),
     pi: common,
     acp: common,
   }
@@ -215,43 +212,8 @@ const frontendProfileConfiguration = resolveFrontendProfileConfiguration({
   baseDirectory: root,
 })
 
-function normalizeCascadeTtsProvider(raw) {
-  const key = String(raw || 'dashscope').trim().toLowerCase()
-  if (key === 'fish' || key === 'fishaudio' || key === 'fish-audio') return 'fish'
-  return key || 'dashscope'
-}
-
 export function resolveCascadeTtsConfig(env = process.env, sharedKey = '') {
-  const provider = normalizeCascadeTtsProvider(env.CASCADE_TTS_PROVIDER)
-  const fish = provider === 'fish'
-  return {
-    provider,
-    // Qwen-Audio-TTS（默认）；voicebox=本机缝；fish=Fish Audio S2.1 HTTP PCM。
-    // CosyVoice 不作为 cascade 默认。
-    model: env.CASCADE_TTS_MODEL
-      || env.FISH_TTS_MODEL
-      || (fish ? 's2.1-pro-free' : 'qwen-audio-3.0-tts-flash'),
-    voice: (
-      env.CASCADE_TTS_VOICE_ID
-      || env.CASCADE_TTS_VOICE
-      || env.FISH_REFERENCE_ID
-      || (fish ? '' : 'longanhuan_v3.6')
-    ),
-    apiKey: (
-      env.CASCADE_TTS_API_KEY
-      || (fish ? env.FISH_API_KEY : '')
-      || sharedKey
-    ),
-    voiceboxBaseUrl: (
-      env.VOICEBOX_BASE_URL || 'http://127.0.0.1:17493'
-    ).replace(/\/+$/, ''),
-    fishBaseUrl: (
-      env.FISH_API_BASE_URL || 'https://api.fish.audio'
-    ).replace(/\/+$/, ''),
-    fishLatency: env.FISH_TTS_LATENCY || env.CASCADE_TTS_LATENCY || 'balanced',
-    // The Gateway forwards assistant audio to clients as 24 kHz PCM16.
-    sampleRate: 24000,
-  }
+  return resolveCascadeTtsPluginConfig(env, sharedKey)
 }
 
 export function resolveCascadeConfig(env = process.env) {
