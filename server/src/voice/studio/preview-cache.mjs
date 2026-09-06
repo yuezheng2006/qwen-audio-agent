@@ -56,6 +56,6 @@ export function withPreviewFlag(profile, previewCache) {
   return {
     ...profile,
     has_preview: ready,
-    preview_url: ready ? `api/voice/profiles/${encodeURIComponent(id)}/preview` : null,
+    preview_url: ready ? `/api/voice/profiles/${encodeURIComponent(id)}/preview` : null,
   }
 }

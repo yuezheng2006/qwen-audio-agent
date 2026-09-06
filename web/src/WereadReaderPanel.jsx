@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiUrl } from './app-paths.js'
 
 async function readJson(response) {
   const resolved = await response
@@ -46,8 +47,8 @@ export default function WereadReaderPanel({
 
   const refreshShelf = useCallback(async () => {
     const [statusPayload, shelfPayload] = await Promise.all([
-      readJson(await fetch('api/weread/status')),
-      readJson(await fetch('api/weread/shelf')),
+      readJson(await fetch(apiUrl('weread/status'))),
+      readJson(await fetch(apiUrl('weread/shelf'))),
     ])
     setStatus(statusPayload)
     setShelf(shelfPayload)
@@ -59,8 +60,8 @@ export default function WereadReaderPanel({
     setError('')
     try {
       const [hl, rv] = await Promise.all([
-        readJson(await fetch(`api/weread/highlights?bookId=${encodeURIComponent(nextBook.bookId)}`)),
-        readJson(await fetch(`api/weread/reviews?bookId=${encodeURIComponent(nextBook.bookId)}`)),
+        readJson(await fetch(apiUrl(`weread/highlights?bookId=${encodeURIComponent(nextBook.bookId)}`))),
+        readJson(await fetch(apiUrl(`weread/reviews?bookId=${encodeURIComponent(nextBook.bookId)}`))),
       ])
       setBook(hl.book || nextBook)
       setHighlights(hl.highlights || [])
@@ -108,7 +109,7 @@ export default function WereadReaderPanel({
     setError('')
     stopAudio()
     try {
-      const response = await fetch('api/weread/speak', {
+      const response = await fetch(apiUrl('weread/speak'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

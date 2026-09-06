@@ -85,6 +85,7 @@ import {
 } from '../client/client-event-router.mjs'
 import { registerVoiceRoutes } from './voice-routes.mjs'
 import { registerMediaRoutes } from './media-routes.mjs'
+import { registerCapabilityRoutes } from './capability-routes.mjs'
 import { createMediaOrchestrator } from '../media/media-orchestrator.mjs'
 import { createDefaultMediaRuntime } from '../media/media-runtime.mjs'
 import { createVoiceProfileStore } from '../voice/studio/profile-store.mjs'
@@ -98,6 +99,8 @@ import {
   startCascadeServer,
   stopCascadeServer,
 } from '../voice/cascade/server.mjs'
+import { MarkdownContentStore } from '../voice/reader/content-store.mjs'
+import { createReaderProgressStore } from '../voice/reader/reader-progress.mjs'
 
 export function createGatewayApplication({
   config = defaultConfig,
@@ -468,6 +471,15 @@ const resolvedMediaOrchestrator = mediaOrchestrator || createMediaOrchestrator(
     adapters: createDefaultMediaRuntime({ config, voiceStudioService }).adapters,
   },
 )
+const contentStore = new MarkdownContentStore({
+  contentDir: config.contentDir
+    || resolve(config.dataDirectory || config.configDirectory || process.cwd(), 'content'),
+})
+const readerProgressByOwner = new Map()
+const readerSessionsByOwner = new Map()
+const readerProgressStore = createReaderProgressStore({
+  filePath: resolve(config.dataDirectory || config.configDirectory || process.cwd(), 'reader-progress.json'),
+})
 const app = express()
 // 资料条目对外的形状。fingerprint 是内部去重用的，不该出现在 API 里；
 // path 要给出来 —— 它就是交给后端 Agent 的那个地址，是这套机制的用处所在。
@@ -611,6 +623,25 @@ registerMediaRoutes(app, {
   mediaOrchestrator: resolvedMediaOrchestrator,
   mediaDirectory: resolve(config.dataDirectory || config.configDirectory || process.cwd(), 'media-assets'),
   outputDirectory: resolve(config.dataDirectory || config.configDirectory || process.cwd(), 'media-output'),
+})
+
+// Keep the WebUI capability surface mounted in the main application. These
+// routes intentionally sit before the static SPA fallback; otherwise a deep
+// panel such as 阅读 or 设置 receives index.html with HTTP 200 and appears to
+// be a successful but empty data load.
+registerCapabilityRoutes(app, {
+  memoryStore: memoryProviderRuntime,
+  knowledgeStore: frontendKnowledgeRuntime,
+  contentStore,
+  notesStore,
+  taskManager,
+  readerProgressByOwner,
+  readerSessionsByOwner,
+  readerProgressStore,
+  getOwnerId: req => req.identity?.ownerId || config.personalOwnerId || 'anonymous',
+  capabilityRegistry: null,
+  supportInboundToken: process.env.SUPPORT_INBOUND_TOKEN || '',
+  memoryBasePath: '/api/memory-items',
 })
 
 let realtimeGateway

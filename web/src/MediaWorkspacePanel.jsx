@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiUrl } from './app-paths.js'
 
 const PHASE_LABELS = {
   inspect: '检查媒体',
@@ -30,7 +31,7 @@ export default function MediaWorkspacePanel({ open }) {
 
   useEffect(() => {
     if (!open) return
-    fetch('api/voice/profiles', { cache: 'no-store' })
+    fetch(apiUrl('voice/profiles'), { cache: 'no-store' })
       .then(readJson)
       .then(payload => {
         const items = Array.isArray(payload.profiles) ? payload.profiles : []
@@ -43,7 +44,7 @@ export default function MediaWorkspacePanel({ open }) {
   useEffect(() => {
     if (!job?.id || !['queued', 'running'].includes(job.status)) return undefined
     const timer = setInterval(() => {
-      fetch(`api/media/jobs/${encodeURIComponent(job.id)}`, { cache: 'no-store' })
+      fetch(apiUrl(`media/jobs/${encodeURIComponent(job.id)}`), { cache: 'no-store' })
         .then(readJson)
         .then(payload => setJob(payload.job))
         .catch(err => setError(err.message))
@@ -60,7 +61,7 @@ export default function MediaWorkspacePanel({ open }) {
     setError('')
     setJob(null)
     try {
-      const upload = await readJson(await fetch('api/media/assets', {
+      const upload = await readJson(await fetch(apiUrl('media/assets'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/octet-stream',
@@ -68,7 +69,7 @@ export default function MediaWorkspacePanel({ open }) {
         },
         body: file,
       }))
-      const result = await readJson(await fetch('api/media/jobs', {
+      const result = await readJson(await fetch(apiUrl('media/jobs'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -139,9 +140,9 @@ export default function MediaWorkspacePanel({ open }) {
         </div>
         {job.status === 'completed' && <div className="media-output-preview">
           {file?.type.startsWith('video/')
-            ? <video controls src={`api/media/jobs/${encodeURIComponent(job.id)}/output`} />
-            : <audio controls src={`api/media/jobs/${encodeURIComponent(job.id)}/output`} />}
-          <a href={`api/media/jobs/${encodeURIComponent(job.id)}/output`} download>下载配音结果</a>
+            ? <video controls src={apiUrl(`media/jobs/${encodeURIComponent(job.id)}/output`)} />
+            : <audio controls src={apiUrl(`media/jobs/${encodeURIComponent(job.id)}/output`)} />}
+          <a href={apiUrl(`media/jobs/${encodeURIComponent(job.id)}/output`)} download>下载配音结果</a>
         </div>}
       </section>}
     </div>

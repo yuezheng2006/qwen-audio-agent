@@ -26,7 +26,7 @@ import {
 } from './voice-recorder.js'
 import { apiUrl } from './app-paths.js'
 
-const TTS_PROVIDERS = ['dashscope', 'voicebox', 'fish', 'firered', 'breeze', 'listenhub', 'minimax']
+const CLONE_PROVIDER_FALLBACKS = ['dashscope', 'fish', 'listenhub', 'minimax']
 
 async function readJson(response) {
   const payload = await response.json().catch(() => ({}))
@@ -348,6 +348,11 @@ function ClonePage({
 
   const tips = qualityTipsFrom(voiceCapabilities)
   const activeProvider = providerCapabilities(voiceCapabilities, ttsDraft.provider)
+  const cloneProviders = voiceCapabilities?.providers?.length
+    ? voiceCapabilities.providers
+      .filter(provider => provider.can_import_id || provider.can_enroll)
+      .map(provider => provider.id)
+    : CLONE_PROVIDER_FALLBACKS
 
   const run = async operation => {
     setBusy(true)
@@ -422,11 +427,14 @@ function ClonePage({
         <button
           className="voice-primary-btn voice-clone-submit"
           type="button"
-          disabled={busy || !sampleReady || !sampleBlob}
+          disabled={busy || !sampleReady || !sampleBlob || !activeProvider?.can_enroll}
           onClick={cloneRecordedVoice}
         >
           {busy ? '提取中…' : '开始提取音色'}
         </button>
+        {activeProvider && !activeProvider.can_enroll && (
+          <small className="voice-field-hint">当前 Provider 只支持导入已有 Voice ID，不能在此注册新音色。</small>
+        )}
       </div>
 
       <div className="voice-clone-form">
@@ -441,7 +449,7 @@ function ClonePage({
               provider: event.target.value,
             }))}
           >
-            {TTS_PROVIDERS.map(id => (
+            {cloneProviders.map(id => (
               <option key={id} value={id}>{id}</option>
             ))}
           </select>

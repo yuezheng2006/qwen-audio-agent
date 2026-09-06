@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { t } from './i18n.js'
+import { apiUrl } from './app-paths.js'
 
 // 资料库面板：把本机的手册 / 规章 / 教材交给助手。
 //
@@ -33,7 +34,7 @@ export default function DomainLibraryPanel({ onClose, getTask }) {
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch('api/domain', { cache: 'no-store' })
+      const response = await fetch(apiUrl('domain'), { cache: 'no-store' })
       if (response.status === 404) {
         setDisabled(true)
         return
@@ -79,7 +80,7 @@ export default function DomainLibraryPanel({ onClose, getTask }) {
     setError('')
     setNotice('')
     try {
-      const response = await fetch('api/domain/import', {
+      const response = await fetch(apiUrl('domain/import'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: trimmed }),
@@ -117,7 +118,7 @@ export default function DomainLibraryPanel({ onClose, getTask }) {
     setError('')
     setNotice('')
     try {
-      const response = await fetch(`api/domain/${encodeURIComponent(document.id)}`, {
+      const response = await fetch(apiUrl(`domain/${encodeURIComponent(document.id)}`), {
         method: 'DELETE',
       })
       if (!response.ok) throw new Error(String(response.status))

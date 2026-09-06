@@ -48,9 +48,11 @@ export function registerCapabilityRoutes(app, {
   resolveCascade = resolveCascadeConfig,
   readerProgressStore = null,
   supportInboundToken = process.env.SUPPORT_INBOUND_TOKEN || '',
+  memoryBasePath = '/api/memory',
 } = {}) {
   const weread = wereadClient || createWereadClient()
-  app.get('/api/memory', async (req, res) => {
+  const memoryRoute = suffix => `${memoryBasePath}${suffix}`
+  app.get(memoryRoute(''), async (req, res) => {
     try {
       const memories = await maybeAwait(memoryStore.list(getOwnerId(req), {
         scope: req.query.scope || 'all',
@@ -63,7 +65,7 @@ export function registerCapabilityRoutes(app, {
     }
   })
 
-  app.post('/api/memory', async (req, res) => {
+  app.post(memoryRoute(''), async (req, res) => {
     const scope = String(req.body?.scope || 'long_term').trim().toLowerCase()
     const content = String(req.body?.content || '').trim()
     if (!MEMORY_WRITE_SCOPES.has(scope) || !isToolScope(scope)) {
@@ -81,7 +83,7 @@ export function registerCapabilityRoutes(app, {
     }
   })
 
-  app.patch('/api/memory/:id', async (req, res) => {
+  app.patch(memoryRoute('/:id'), async (req, res) => {
     const id = String(req.params.id || '').trim()
     const content = String(req.body?.content || '').trim()
     if (!id) return res.status(400).json({ error: 'memory id is required' })
@@ -105,7 +107,7 @@ export function registerCapabilityRoutes(app, {
     }
   })
 
-  app.delete('/api/memory/:id', async (req, res) => {
+  app.delete(memoryRoute('/:id'), async (req, res) => {
     const id = String(req.params.id || '').trim()
     if (!id) return res.status(400).json({ error: 'memory id is required' })
     try {
@@ -129,7 +131,7 @@ export function registerCapabilityRoutes(app, {
     }
   })
 
-  app.delete('/api/memory', async (req, res) => {
+  app.delete(memoryRoute(''), async (req, res) => {
     if (req.query.confirm !== 'true') {
       return res.status(400).json({
         error: '清空长期记忆需要 confirm=true',
@@ -334,6 +336,18 @@ export function registerCapabilityRoutes(app, {
   })
 
   app.get('/api/knowledge', async (req, res) => {
+    if (!knowledgeStore) {
+      return res.json({
+        health: {
+          ok: false,
+          configured: false,
+          provider: null,
+          warning: '本地知识库未配置',
+        },
+        sources: [],
+        count: 0,
+      })
+    }
     try {
       const health = await maybeAwait(knowledgeStore.health())
       const sources = await maybeAwait(knowledgeStore.listSources({

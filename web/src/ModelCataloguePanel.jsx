@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { apiUrl } from './app-paths.js'
 
 async function readHealth() {
-  const response = await fetch('api/health', { cache: 'no-store' })
+  const response = await fetch(apiUrl('health'), { cache: 'no-store' })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(payload.error || `请求失败（${response.status}）`)
   return payload

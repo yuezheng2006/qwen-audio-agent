@@ -65,7 +65,7 @@ export function friendlyVoiceName(profile) {
 }
 
 export function previewUrlFor(profile) {
-  if (profile?.preview_url) return profile.preview_url
+  if (profile?.preview_url) return apiUrl(profile.preview_url)
   if (profile?.has_preview && profile?.id) {
     return apiUrl(`voice/profiles/${encodeURIComponent(profile.id)}/preview`)
   }

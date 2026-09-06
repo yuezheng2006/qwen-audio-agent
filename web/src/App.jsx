@@ -88,6 +88,7 @@ import {
   applyDesktopClientSettings,
   initialDesktopClientSettings,
 } from './desktop-client-settings.js'
+import { apiUrl } from './app-paths.js'
 
 const desktopOrbMode = (
   new URLSearchParams(window.location.search).get('desktop') === 'orb'
@@ -375,7 +376,7 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     let refreshTimer
-    const refresh = () => fetch('api/health', { cache: 'no-store' })
+    const refresh = () => fetch(apiUrl('health'), { cache: 'no-store' })
       .then(async response => ({ response, payload: await response.json() }))
       .then(({ response, payload }) => {
         if (cancelled) return

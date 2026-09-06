@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { knowledgeHealthSummary } from './knowledge-health.js'
+import { apiUrl } from './app-paths.js'
 
 const MEMORY_SCOPES = [
   { id: 'all', label: '全部' },
@@ -68,7 +69,7 @@ function waitForHealth(match, { timeoutMs = 25000 } = {}) {
     while (Date.now() < deadline) {
       await new Promise(resolve => setTimeout(resolve, 500))
       try {
-        const health = await readJson(await fetch('api/health'))
+        const health = await readJson(await fetch(apiUrl('health')))
         if (match(health)) return health
       } catch {
         // gateway restarting
@@ -117,12 +118,12 @@ export default function RuntimeSettings({
 
   const refreshMemories = useCallback(async (scope = memoryScope) => {
     const query = scope === 'all' ? '' : `?scope=${encodeURIComponent(scope)}`
-    const payload = await readJson(await fetch(`api/memory${query}`))
+    const payload = await readJson(await fetch(apiUrl(`memory-items${query}`)))
     setMemories(payload.memories || [])
   }, [memoryScope])
 
   const refreshNotes = useCallback(async (listName = activeList) => {
-    const payload = await readJson(await fetch('api/notes'))
+    const payload = await readJson(await fetch(apiUrl('notes')))
     const lists = payload.lists || []
     setNotesLists(lists)
     const nextList = listName && lists.some(item => item.list === listName)
@@ -133,21 +134,21 @@ export default function RuntimeSettings({
       setNoteItems([])
       return
     }
-    const shown = await readJson(await fetch(`api/notes/${encodeURIComponent(nextList)}`))
+    const shown = await readJson(await fetch(apiUrl(`notes/${encodeURIComponent(nextList)}`)))
     setNoteItems(shown.items || [])
   }, [activeList])
 
   const refreshReminders = useCallback(async () => {
-    const payload = await readJson(await fetch('api/reminders'))
+    const payload = await readJson(await fetch(apiUrl('reminders')))
     setReminders(payload.reminders || [])
   }, [])
 
   const refreshLibraries = useCallback(async () => {
     const [knowledgePayload, contentPayload, skillsPayload, capabilitiesPayload] = await Promise.all([
-      readJson(await fetch('api/knowledge')),
-      readJson(await fetch('api/content')),
-      readJson(await fetch('api/skills')),
-      readJson(await fetch('api/capabilities')),
+      readJson(await fetch(apiUrl('knowledge'))),
+      readJson(await fetch(apiUrl('content'))),
+      readJson(await fetch(apiUrl('skills'))),
+      readJson(await fetch(apiUrl('capabilities'))),
     ])
     setKnowledge(knowledgePayload)
     setContent(contentPayload)
@@ -203,7 +204,7 @@ export default function RuntimeSettings({
     await run(async () => {
       onModeSwitching?.(true)
       try {
-        await readJson(await fetch('api/runtime/mode', {
+        await readJson(await fetch(apiUrl('runtime/mode'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mode: modeDraft }),
@@ -219,20 +220,20 @@ export default function RuntimeSettings({
 
   const createMemory = async () => {
     await run(async () => {
-      await readJson(await fetch('api/memory', {
+      await readJson(await fetch(apiUrl('memory-items'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(memoryDraft),
       }))
       setMemoryDraft(current => ({ ...current, content: '' }))
       await refreshMemories()
-      onRuntimeChange?.(await readJson(await fetch('api/health')))
+      onRuntimeChange?.(await readJson(await fetch(apiUrl('health'))))
     })
   }
 
   const saveMemoryEdit = async (id) => {
     await run(async () => {
-      await readJson(await fetch(`api/memory/${encodeURIComponent(id)}`, {
+      await readJson(await fetch(apiUrl(`memory-items/${encodeURIComponent(id)}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: editingMemoryContent }),
@@ -244,11 +245,11 @@ export default function RuntimeSettings({
 
   const deleteMemory = async (id) => {
     await run(async () => {
-      await readJson(await fetch(`api/memory/${encodeURIComponent(id)}`, {
+      await readJson(await fetch(apiUrl(`memory-items/${encodeURIComponent(id)}`), {
         method: 'DELETE',
       }))
       await refreshMemories()
-      onRuntimeChange?.(await readJson(await fetch('api/health')))
+      onRuntimeChange?.(await readJson(await fetch(apiUrl('health'))))
     })
   }
 
@@ -257,9 +258,9 @@ export default function RuntimeSettings({
       return
     }
     await run(async () => {
-      await readJson(await fetch('api/memory?confirm=true', { method: 'DELETE' }))
+      await readJson(await fetch(apiUrl('memory-items?confirm=true'), { method: 'DELETE' }))
       await refreshMemories()
-      onRuntimeChange?.(await readJson(await fetch('api/health')))
+      onRuntimeChange?.(await readJson(await fetch(apiUrl('health'))))
     })
   }
 
@@ -267,7 +268,7 @@ export default function RuntimeSettings({
     const items = noteItemDraft.split(/[,，\n]/).map(item => item.trim()).filter(Boolean)
     if (!items.length) return
     await run(async () => {
-      await readJson(await fetch('api/notes', {
+      await readJson(await fetch(apiUrl('notes'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -283,7 +284,7 @@ export default function RuntimeSettings({
 
   const removeNoteItem = async (text) => {
     await run(async () => {
-      await readJson(await fetch('api/notes', {
+      await readJson(await fetch(apiUrl('notes'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -301,7 +302,7 @@ export default function RuntimeSettings({
     const label = action === 'drop' ? '删除整个清单' : '清空清单条目'
     if (!window.confirm(`确认${label}「${activeList}」？`)) return
     await run(async () => {
-      await readJson(await fetch('api/notes', {
+      await readJson(await fetch(apiUrl('notes'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, list: activeList }),
@@ -315,7 +316,7 @@ export default function RuntimeSettings({
       ? new Date(reminderDraft.executeAt).toISOString()
       : ''
     await run(async () => {
-      await readJson(await fetch('api/reminders', {
+      await readJson(await fetch(apiUrl('reminders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -331,7 +332,7 @@ export default function RuntimeSettings({
 
   const cancelReminder = async (id) => {
     await run(async () => {
-      await readJson(await fetch(`api/reminders/${encodeURIComponent(id)}`, {
+      await readJson(await fetch(apiUrl(`reminders/${encodeURIComponent(id)}`), {
         method: 'DELETE',
       }))
       await refreshReminders()
@@ -340,7 +341,7 @@ export default function RuntimeSettings({
 
   const searchKnowledge = async () => {
     await run(async () => {
-      const payload = await readJson(await fetch('api/knowledge/search', {
+      const payload = await readJson(await fetch(apiUrl('knowledge/search'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: knowledgeQuery }),
@@ -351,7 +352,7 @@ export default function RuntimeSettings({
 
   const reindexKnowledge = async () => {
     await run(async () => {
-      await readJson(await fetch('api/knowledge/reindex', {
+      await readJson(await fetch(apiUrl('knowledge/reindex'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{}',

@@ -273,7 +273,7 @@ test('POST /api/voice/preview warms cache; GET serves cached wav', async () => {
       const body = await list.json()
       const p1 = body.profiles.find(item => item.id === 'p1')
       assert.equal(p1.has_preview, true)
-      assert.equal(p1.preview_url, 'api/voice/profiles/p1/preview')
+    assert.equal(p1.preview_url, '/api/voice/profiles/p1/preview')
     })
   } finally {
     rmSync(dir, { recursive: true, force: true })
