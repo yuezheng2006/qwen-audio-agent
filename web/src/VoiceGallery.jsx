@@ -107,10 +107,13 @@ export default function VoiceGallery({
   }, [clearAudio])
 
   const refreshVoiceProfiles = useCallback(async () => {
-    const [profilesRes, capsRes] = await Promise.all([
+    const [profilesResult, capsResult] = await Promise.allSettled([
       fetch('api/voice/profiles'),
       fetch('api/voice/capabilities'),
     ])
+    if (profilesResult.status === 'rejected') throw profilesResult.reason
+    const profilesRes = profilesResult.value
+    const capsRes = capsResult.status === 'fulfilled' ? capsResult.value : null
     if (profilesRes.status === 503) {
       setVoiceStudioAvailable(false)
       setVoiceProfiles([])
@@ -125,7 +128,7 @@ export default function VoiceGallery({
     ))
     setVoiceProfiles(profiles)
     setActiveVoice(payload.active || null)
-    if (capsRes.status === 503) {
+    if (!capsRes || capsRes.status === 503) {
       setVoiceCapabilities(null)
     } else if (capsRes.ok) {
       setVoiceCapabilities(await capsRes.json().catch(() => null))
@@ -306,7 +309,12 @@ export default function VoiceGallery({
 
   return (
     <div className="voice-studio-body voice-gallery">
-      {error && <p className="settings-error">{error}</p>}
+      {error && (
+        <div className="voice-inline-error" role="status">
+          <span>{error}</span>
+          <button type="button" onClick={() => run(refreshVoiceProfiles)}>重试</button>
+        </div>
+      )}
 
       <div className="voice-gallery-heading">
         <div>
@@ -337,7 +345,10 @@ export default function VoiceGallery({
       </div>
 
       {runtime?.frontendMode !== 'cascade' ? (
-        <p className="voice-studio-note">当前非 cascade 模式，请先到引擎设置切换为级联。</p>
+        <div className="voice-mode-empty">
+          <strong>声音库暂未启用</strong>
+          <p>当前使用实时语音模式。切换到 Cascade 后，这里会显示可试听、可选用的音色。</p>
+        </div>
       ) : (
         <>
           <div className="voice-active-bar">

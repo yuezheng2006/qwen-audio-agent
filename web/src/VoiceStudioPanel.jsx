@@ -672,19 +672,21 @@ export default function VoiceStudioPanel({
       <div className="settings-panel settings-panel-wide voice-studio-panel">
         <header className="voice-studio-header">
           <div className="voice-studio-header-main">
-            {view !== 'launchpad' ? (
+            {view !== 'launchpad' && (
               <button
                 type="button"
-                className="voice-text-btn"
+                className="voice-studio-back"
                 onClick={() => setView('launchpad')}
               >
-                ← 返回
+                <span aria-hidden="true">←</span> 返回
               </button>
-            ) : (
-              <span className="voice-studio-kicker">Voice Studio</span>
             )}
-            <h2>{title}</h2>
+            <div className="voice-studio-title-stack">
+              <span className="voice-studio-kicker">VOICE STUDIO</span>
+              <h2>{title}</h2>
+            </div>
           </div>
+          <span className="voice-studio-header-status">LOCAL · READY</span>
         </header>
 
         <nav className="voice-studio-tabs" aria-label="语音工作室工作区" role="tablist">

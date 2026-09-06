@@ -3103,3 +3103,125 @@ header select.frontend-provider option {
 .voice-studio-app .studio-history-list { gap: 7px; }
 .voice-studio-app .studio-history-item { padding: 9px; }
 .voice-studio-app .studio-history-item p { margin: 5px 0; }
+
+/* Structural VoiceStudio shell: the workbench owns the full canvas. */
+.voice-studio-app .workspace-voice-studio {
+  box-sizing: border-box;
+  width: calc(100% - var(--studio-rail-width)) !important;
+  max-width: none;
+  margin: 0 0 0 var(--studio-rail-width);
+  padding-inline: 18px;
+}
+.voice-studio-app .workspace-voice-studio > .voice-studio-drawer {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.voice-studio-app .workspace-voice-studio > .voice-studio-drawer > .voice-studio-panel {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+.voice-studio-app .voice-studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.voice-studio-app .voice-studio-header-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+.voice-studio-app .voice-studio-title-stack {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+.voice-studio-app .voice-studio-title-stack h2 {
+  margin: 0;
+  line-height: 1.1;
+}
+.voice-studio-app .voice-studio-kicker {
+  display: block;
+  margin: 0;
+  color: #9d7180;
+  font-size: 8px;
+  letter-spacing: .16em;
+}
+.voice-studio-app .voice-studio-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid #342b2e;
+  border-radius: 5px;
+  color: #bdaab0;
+  background: #171415;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.voice-studio-app .voice-studio-back:hover {
+  color: #f0c0cf;
+  border-color: #6b4553;
+  background: #251b20;
+}
+.voice-studio-app .voice-studio-header-status {
+  flex: 0 0 auto;
+  color: #6f8e78;
+  font: 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
+}
+.voice-studio-app .voice-studio-body {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+.voice-studio-app .voice-gallery,
+.voice-studio-app .voice-gallery-heading,
+.voice-studio-app .voice-gallery-toolbar,
+.voice-studio-app .voice-active-bar {
+  width: 100%;
+  box-sizing: border-box;
+}
+.voice-inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid #633a43;
+  border-radius: 5px;
+  color: #e3a9b4;
+  background: #25171b;
+  font-size: 11px;
+}
+.voice-inline-error button {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid #76505a;
+  border-radius: 4px;
+  color: #f0c0cf;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.voice-mode-empty {
+  display: grid;
+  max-width: 520px;
+  gap: 5px;
+  padding: 18px 0;
+  color: #8a7f77;
+}
+.voice-mode-empty strong { color: #d8c5ac; font-size: 14px; }
+.voice-mode-empty p { margin: 0; font-size: 11px; line-height: 1.55; }
+
+@media (max-width: 700px) {
+  .voice-studio-app .workspace-voice-studio { padding-inline: 12px; }
+  .voice-studio-app .voice-studio-header-status { display: none; }
+}
