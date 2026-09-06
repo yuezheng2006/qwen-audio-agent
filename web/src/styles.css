@@ -2460,16 +2460,6 @@ header select.frontend-provider option {
 .voice-studio-app .topbar-actions { padding-left: 0; border-left: 0; }
 .voice-studio-app .topbar-actions { margin-left: auto; }
 .voice-studio-app .topbar-actions .status { font-size: 11px; }
-.voice-studio-app .studio-topbar-title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--studio-brand);
-  font-size: 14px;
-  font-weight: 650;
-  letter-spacing: .02em;
-}
-
 .voice-studio-app > .app-rail {
   position: absolute;
   inset: 48px auto 0 0;
@@ -2655,7 +2645,6 @@ header select.frontend-provider option {
 }
 @media (max-width: 460px) {
   .voice-studio-app .voice-row-list { grid-template-columns: 1fr; }
-  .voice-studio-app .studio-topbar-title { display: none; }
 }
 
 .voice-studio-app .voice-clone-body {
