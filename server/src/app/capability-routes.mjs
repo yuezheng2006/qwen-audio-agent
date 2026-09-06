@@ -1,5 +1,5 @@
 import { maybeAwait } from '../conversation/memory/provider.mjs'
-import { isToolScope } from '../core/memory-scopes.mjs'
+import { canonicalScope, isToolScope } from '../core/memory-scopes.mjs'
 import { importContentDocument } from '../voice/reader/ingest/import-content.mjs'
 import { createWereadClient } from '../voice/reader/weread/client.mjs'
 import {
@@ -9,7 +9,7 @@ import {
 import { resolveCascadeConfig } from '../core/config.mjs'
 import { verifySupportToken } from '../conversation/workspace.mjs'
 
-const MEMORY_WRITE_SCOPES = new Set(['profile', 'long_term', 'rules'])
+const MEMORY_WRITE_SCOPES = new Set(['profile', 'long_term', 'rules', 'user', 'memory'])
 const REMINDER_KINDS = new Set(['reminder', 'scheduled_task'])
 const REMINDER_RECURRENCE = new Set(['once', 'daily', 'weekly', 'weekdays'])
 const CONTENT_ACTIONS = new Set([
@@ -24,8 +24,7 @@ const CONTENT_ACTIONS = new Set([
 ])
 
 function memoryScopeOf(target) {
-  if (MEMORY_WRITE_SCOPES.has(target?.scope)) return target.scope
-  return 'long_term'
+  return canonicalScope(target?.scope) === 'user' ? 'user' : 'memory'
 }
 
 /**
@@ -68,7 +67,7 @@ export function registerCapabilityRoutes(app, {
     const scope = String(req.body?.scope || 'long_term').trim().toLowerCase()
     const content = String(req.body?.content || '').trim()
     if (!MEMORY_WRITE_SCOPES.has(scope) || !isToolScope(scope)) {
-      return res.status(400).json({ error: 'scope must be profile|long_term|rules' })
+      return res.status(400).json({ error: 'scope must be user|memory (legacy profile|long_term|rules accepted)' })
     }
     if (!content) return res.status(400).json({ error: 'content is required' })
     try {
@@ -623,12 +622,14 @@ export function registerCapabilityRoutes(app, {
         tools: [],
         toolCount: 0,
         mcp: { servers: [], toolCount: 0 },
+        plugins: { apiVersion: null, plugins: [], pluginCount: 0, activeCount: 0, failedCount: 0, loadFailures: [] },
       }
       res.json({
         skills: health.skills || [],
         count: health.skillCount || 0,
         tools: health.tools || [],
         mcp: health.mcp || { servers: [], toolCount: 0 },
+        plugins: health.plugins || { apiVersion: null, plugins: [], pluginCount: 0, activeCount: 0, failedCount: 0, loadFailures: [] },
       })
     } catch (error) {
       res.status(503).json({ error: error.message })
@@ -643,6 +644,7 @@ export function registerCapabilityRoutes(app, {
         skills: [],
         skillCount: 0,
         mcp: { servers: [], toolCount: 0 },
+        plugins: { apiVersion: null, plugins: [], pluginCount: 0, activeCount: 0, failedCount: 0, loadFailures: [] },
       })
     } catch (error) {
       res.status(503).json({ error: error.message })

@@ -94,6 +94,14 @@ async function withApp(setup, run) {
       skills: [{ name: 'concise-voice', description: 'short', enabled: true }],
       skillCount: 1,
       mcp: { servers: [], toolCount: 0 },
+      plugins: {
+        apiVersion: '1',
+        plugins: [{ id: 'qwaudio.test.weather', status: 'active' }],
+        pluginCount: 1,
+        activeCount: 1,
+        failedCount: 0,
+        loadFailures: [],
+      },
     }),
   }
   const routeDeps = {
@@ -336,6 +344,8 @@ test('memory list/delete and content reader progress work', async () => {
     const capabilities = await request(base, '/api/capabilities')
     assert.equal(capabilities.status, 200)
     assert.equal(capabilities.payload.toolCount, 1)
+    assert.equal(capabilities.payload.plugins.activeCount, 1)
+    assert.equal(capabilities.payload.plugins.plugins[0].id, 'qwaudio.test.weather')
   })
 })
 

@@ -39,6 +39,21 @@ export function canonicalScope(value) {
 // the tool schema expresses "all" by omitting the scope argument.
 export const ALL_SCOPE = 'all'
 export const MEMORY_DOCUMENTS = Object.keys(MEMORY_SCOPES)
+// HTTP and tool callers from the pre-document contract may still send these
+// aliases. Keep validation at the shared seam while canonicalScope() maps
+// them to the current user/memory documents.
+export const TOOL_SCOPES = Object.freeze([
+  ...MEMORY_DOCUMENTS,
+  'profile',
+  'rules',
+  'facts',
+  'long_term',
+  ALL_SCOPE,
+])
+
+export function isToolScope(scope) {
+  return TOOL_SCOPES.includes(String(scope || '').trim().toLowerCase())
+}
 
 function scopeMeta(scope) {
   return MEMORY_SCOPES[canonicalScope(scope)] || null

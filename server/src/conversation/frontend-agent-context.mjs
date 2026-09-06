@@ -119,6 +119,21 @@ function memorySection(memories = []) {
   ].join('\n')
 }
 
+// Compatibility projection for older Realtime callers. Standing preferences
+// are small and must all survive; factual long-term memory is bounded by the
+// newest entries before it enters prompt context.
+export function selectMemoriesForPrompt(memories = [], { longTermLimit = 12 } = {}) {
+  const entries = Array.isArray(memories) ? memories : []
+  const preferences = entries.filter(memory => (
+    isDirectiveScope(clean(memory?.scope))
+  ))
+  const facts = entries
+    .filter(memory => canonicalScope(clean(memory?.scope)) === 'memory')
+    .toSorted((a, b) => Number(b?.updated_at || 0) - Number(a?.updated_at || 0))
+    .slice(0, Math.max(1, Number(longTermLimit) || 12))
+  return [...preferences, ...facts]
+}
+
 export function buildRecentConversationContext(messages = []) {
   const candidates = recentConversationMessages(messages)
   const selected = []
