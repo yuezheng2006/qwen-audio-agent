@@ -6,6 +6,7 @@ import { join } from 'node:path'
 
 import { createVoiceProfileStore } from '../src/voice/studio/profile-store.mjs'
 import { createSampleResolver } from '../src/voice/studio/sample-resolver.mjs'
+import { createSampleAssetStore } from '../src/voice/studio/sample-asset-store.mjs'
 import { createVoiceStudioService } from '../src/voice/studio/service.mjs'
 import { serializeProfile } from '../src/voice/studio/types.mjs'
 
@@ -517,5 +518,49 @@ test('sample resolver rejects symlink paths escaping an allowed root', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true })
     rmSync(outside, { recursive: true, force: true })
+  }
+})
+
+test('sample resolver materializes browser audio for providers that need a public URL', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'voice-sample-assets-'))
+  try {
+    const assets = createSampleAssetStore({
+      directory: join(dir, 'assets'),
+      publicBaseUrl: 'https://voice.example.test',
+    })
+    const resolver = createSampleResolver({
+      presetsDir: dir,
+      catalog: { resolveSamplePath: () => null },
+      sampleAssetStore: assets,
+    })
+    const sample = resolver.resolve({
+      sample_data_url: 'data:audio/wav;base64,UklGRg==',
+    }, { needsPublicUrl: true })
+    assert.equal(sample.kind, 'url')
+    assert.match(sample.url, /^https:\/\/voice\.example\.test\/api\/voice\/samples\//)
+    assert.equal(assets.read(sample.assetToken).bytes.toString(), 'RIFF')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('browser audio clone gives an actionable error without public sample hosting', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'voice-sample-assets-'))
+  try {
+    const resolver = createSampleResolver({
+      presetsDir: dir,
+      catalog: { resolveSamplePath: () => null },
+    })
+    assert.throws(
+      () => resolver.resolve({
+        sample_data_url: 'data:audio/wav;base64,UklGRg==',
+      }, { needsPublicUrl: true }),
+      error => (
+        error.normalized?.error_code === 'sample_public_url_required'
+        && error.message.includes('VOICE_SAMPLE_PUBLIC_BASE_URL')
+      ),
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
   }
 })

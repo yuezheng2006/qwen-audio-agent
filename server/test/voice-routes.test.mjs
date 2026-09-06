@@ -183,6 +183,27 @@ test('POST /api/voice/clone accepts a browser recording data URL', async () => {
   })
 })
 
+test('GET /api/voice/samples serves an opaque browser sample for provider fetches', async () => {
+  const token = '11111111-1111-4111-8111-111111111111'
+  await withServer(app => {
+    registerVoiceRoutes(app, {
+      voiceStudioService: mockService(),
+      sampleAssetStore: {
+        read(value) {
+          return value === token
+            ? { mime: 'audio/wav', bytes: Buffer.from('RIFFsample') }
+            : null
+        },
+      },
+    })
+  }, async base => {
+    const res = await fetch(`${base}/api/voice/samples/${token}`)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers.get('content-type'), 'audio/wav')
+    assert.equal(Buffer.from(await res.arrayBuffer()).toString(), 'RIFFsample')
+  })
+})
+
 test('preview Content-Disposition names the wav after the friendly voice', () => {
   assert.equal(
     previewContentDisposition({ label: '刘震云·北大·降噪' }, { download: true }),

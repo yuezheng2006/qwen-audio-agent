@@ -77,6 +77,12 @@ export function isAllowedOrigin(
 }
 
 export function enforceSameOrigin(req, res, next) {
+  // The configured public voice-sample endpoint is fetched server-to-server
+  // by a TTS provider, so it has no browser Origin or session cookie. Access
+  // remains bounded by the opaque sample token and the read-only route.
+  if (req.method === 'GET' && /^\/api\/voice\/samples\/[0-9a-f-]{36}$/i.test(req.path)) {
+    return next()
+  }
   if (!isAllowedOrigin(req)) {
     res.status(403).json({ error: 'origin not allowed' })
     return

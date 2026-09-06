@@ -47,7 +47,8 @@ export function createVoiceStudioService({
   persistCascadeTts = async () => {},
   restartGateway = () => {},
   defaultProvider,
-  sampleResolver = createSampleResolver({ catalog, presetsDir }),
+  sampleAssetStore = null,
+  sampleResolver = createSampleResolver({ catalog, presetsDir, sampleAssetStore }),
   asr = createAsrService(),
 } = {}) {
   if (!store) throw new Error('voice profile store is required')
@@ -335,6 +336,9 @@ export function createVoiceStudioService({
           needs_public_url: Boolean(caps.needsPublicUrl),
           sample_hints: sampleHintsToSnake(caps.sampleHints || {}),
           quality_tips: qualityTipsFor(id),
+          sample_transport: caps.needsPublicUrl
+            ? (sampleAssetStore?.enabled ? 'gateway_public_url' : 'public_url_required')
+            : 'gateway_local',
           ...(canPreview ? {} : { preview_reason: 'preview_unsupported' }),
         }
       })

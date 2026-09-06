@@ -91,6 +91,7 @@ import { createVoiceProfileStore } from '../voice/studio/profile-store.mjs'
 import { loadPresetCatalog } from '../voice/studio/preset-catalog.mjs'
 import { createVoiceCloneProviders } from '../voice/studio/providers/registry.mjs'
 import { createVoiceStudioService } from '../voice/studio/service.mjs'
+import { createSampleAssetStore } from '../voice/studio/sample-asset-store.mjs'
 import { persistCascadeTts } from '../../../scripts/lib/runtime-config-file.mjs'
 import { restartGateway } from './restart-gateway.mjs'
 import {
@@ -428,13 +429,18 @@ const knowledgeProviderRuntime = knowledgeProvider
 const frontendKnowledgeRuntime = frontendKnowledge || (knowledgeProviderRuntime
   ? new FrontendKnowledgeRuntime({ provider: knowledgeProviderRuntime })
   : null)
+let voiceSampleAssetStore = null
 const voiceStudioService = config.voiceStudioEnabled === false
   ? null
-  : createVoiceStudioService({
-      store: createVoiceProfileStore({
-        dir: config.voiceProfileDir
-          || resolve(config.configDirectory || config.dataDirectory || process.cwd(), 'voice-profiles'),
-      }),
+  : (() => {
+    const voiceProfileDir = config.voiceProfileDir
+      || resolve(config.configDirectory || config.dataDirectory || process.cwd(), 'voice-profiles')
+    voiceSampleAssetStore = createSampleAssetStore({
+      directory: resolve(voiceProfileDir, 'samples'),
+      publicBaseUrl: process.env.VOICE_SAMPLE_PUBLIC_BASE_URL,
+    })
+    return createVoiceStudioService({
+      store: createVoiceProfileStore({ dir: voiceProfileDir }),
       catalog: loadPresetCatalog(
         config.voicePresetDir || resolve(config.root || process.cwd(), 'config/voice-presets'),
       ),
@@ -454,7 +460,9 @@ const voiceStudioService = config.voiceStudioEnabled === false
       persistCascadeTts,
       restartGateway: () => restartGateway({ root: config.root }),
       defaultProvider: process.env.CASCADE_TTS_PROVIDER || 'dashscope',
+      sampleAssetStore: voiceSampleAssetStore,
     })
+  })()
 const resolvedMediaOrchestrator = mediaOrchestrator || createMediaOrchestrator(
   {
     adapters: createDefaultMediaRuntime({ config, voiceStudioService }).adapters,
@@ -589,6 +597,7 @@ registerVoiceRoutes(app, {
   voiceStudioService,
   voiceProfileDir: config.voiceProfileDir
     || resolve(config.configDirectory || config.dataDirectory || process.cwd(), 'voice-profiles'),
+  sampleAssetStore: voiceSampleAssetStore,
   getCascadeTts: () => ({
     provider: process.env.CASCADE_TTS_PROVIDER || 'dashscope',
     apiKey: process.env.CASCADE_TTS_API_KEY || config.dashscopeApiKey,

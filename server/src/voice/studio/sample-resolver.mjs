@@ -27,6 +27,7 @@ export function createSampleResolver({
   catalog,
   presetsDir,
   tmpRoot = tmpdir(),
+  sampleAssetStore = null,
 } = {}) {
   if (!catalog) throw new Error('preset catalog is required')
   const allowedRoots = [presetsDir, tmpRoot]
@@ -66,6 +67,27 @@ export function createSampleResolver({
         }
         if (value.length > 7 * 1024 * 1024) {
           throw resolverError('sample_too_large', '录音样本不能超过 5 MB。')
+        }
+        if (capabilities.needsPublicUrl) {
+          if (!sampleAssetStore?.materialize) {
+            throw resolverError(
+              'sample_public_url_required',
+              '当前 provider 需要公网可访问的音频地址，请配置 VOICE_SAMPLE_PUBLIC_BASE_URL。',
+            )
+          }
+          try {
+            const asset = sampleAssetStore.materialize(value)
+            return {
+              kind: 'url',
+              url: asset.publicUrl,
+              sourcePath: asset.path,
+              assetToken: asset.token,
+            }
+          } catch (error) {
+            throw error.normalized
+              ? resolverError(error.normalized.error_code, error.normalized.user_message)
+              : error
+          }
         }
         return { kind: 'url', url: value }
       }

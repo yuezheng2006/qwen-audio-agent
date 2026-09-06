@@ -76,10 +76,23 @@ export function registerVoiceRoutes(app, {
   synthesizeNarrationFn = synthesizeNarration,
   previewCache = null,
   voiceProfileDir = '',
+  sampleAssetStore = null,
 } = {}) {
   const cache = previewCache || (
     voiceProfileDir ? createPreviewCache({ dir: voiceProfileDir }) : null
   )
+
+  // DashScope's legacy voice-enrollment API fetches the sample itself. This
+  // deliberately uses an opaque, single-purpose token rather than exposing
+  // the profile directory or requiring browser cookies on the provider call.
+  app.get('/api/voice/samples/:token', (req, res) => {
+    const asset = sampleAssetStore?.read?.(req.params.token)
+    if (!asset) return res.status(404).end()
+    res.setHeader('Content-Type', asset.mime)
+    res.setHeader('Content-Length', String(asset.bytes.length))
+    res.setHeader('Cache-Control', 'public, max-age=300, immutable')
+    return res.send(asset.bytes)
+  })
 
   app.get('/api/voice/profiles', (req, res) => {
     if (!voiceStudioService) return unavailable(res)

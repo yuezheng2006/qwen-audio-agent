@@ -57,6 +57,10 @@ function qualityTipsFrom(voiceCapabilities) {
   return Array.isArray(tips) ? tips : []
 }
 
+function providerCapabilities(voiceCapabilities, provider) {
+  return voiceCapabilities?.providers?.find(item => item.id === provider) || null
+}
+
 function RecordingClipEditor({ onSampleReady }) {
   const [recording, setRecording] = useState(false)
   const [elapsed, setElapsed] = useState(0)
@@ -342,6 +346,7 @@ function ClonePage({
   }
 
   const tips = qualityTipsFrom(voiceCapabilities)
+  const activeProvider = providerCapabilities(voiceCapabilities, ttsDraft.provider)
 
   const run = async operation => {
     setBusy(true)
@@ -383,6 +388,13 @@ function ClonePage({
         <strong>语音克隆</strong>
         <p>对助手说「克隆一个音色」，按提示录 5–15 秒即可。</p>
       </div>
+
+      {activeProvider?.sample_transport === 'public_url_required' && (
+        <div className="voice-clone-requirement" role="status">
+          <strong>还差一步：配置录音访问地址</strong>
+          <p>当前 Provider 需要从公网读取录音。请先设置 <code>VOICE_SAMPLE_PUBLIC_BASE_URL</code>，再通过 HTTPS 隧道或反向代理暴露 Gateway。</p>
+        </div>
+      )}
 
       {!!tips.length && (
         <details className="voice-tips-fold">
