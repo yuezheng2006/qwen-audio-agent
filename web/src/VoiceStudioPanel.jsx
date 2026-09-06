@@ -24,8 +24,9 @@ import {
   formatRecordingTime,
   selectRecorderMimeType,
 } from './voice-recorder.js'
+import { apiUrl } from './app-paths.js'
 
-const TTS_PROVIDERS = ['dashscope', 'voicebox', 'fish', 'listenhub', 'minimax']
+const TTS_PROVIDERS = ['dashscope', 'voicebox', 'fish', 'firered', 'breeze', 'listenhub', 'minimax']
 
 async function readJson(response) {
   const payload = await response.json().catch(() => ({}))
@@ -41,7 +42,7 @@ function waitForHealth(match, { timeoutMs = 25000 } = {}) {
     while (Date.now() < deadline) {
       await new Promise(resolve => setTimeout(resolve, 500))
       try {
-        const health = await readJson(await fetch('api/health'))
+        const health = await readJson(await fetch(apiUrl('health')))
         if (match(health)) return health
       } catch {
         // gateway restarting
@@ -288,7 +289,7 @@ function ClonePage({
   const [label, setLabel] = useState('我的声音')
 
   const refreshCaps = useCallback(async () => {
-    const res = await fetch('api/voice/capabilities')
+    const res = await fetch(apiUrl('voice/capabilities'))
     if (res.status === 503) {
       setVoiceCapabilities(null)
       return
@@ -327,7 +328,7 @@ function ClonePage({
     setError('')
     onModeSwitching?.(true)
     try {
-      await readJson(await fetch('api/runtime/cascade-tts', {
+      await readJson(await fetch(apiUrl('runtime/cascade-tts'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ttsDraft),
@@ -364,7 +365,7 @@ function ClonePage({
     if (!sampleBlob) return
     await run(async () => {
       const sample = await blobToDataUrl(sampleBlob)
-      const result = await readJson(await fetch('api/voice/clone', {
+      const result = await readJson(await fetch(apiUrl('voice/clone'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -504,7 +505,7 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
 
   useEffect(() => {
     let cancelled = false
-    fetch('api/voice/profiles')
+    fetch(apiUrl('voice/profiles'))
       .then(response => response.ok ? response.json() : null)
       .then(payload => {
         if (cancelled || !payload) return
@@ -540,7 +541,7 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
     setBusy(true)
     setError('')
     try {
-      const response = await fetch('api/voice/narrate', {
+      const response = await fetch(apiUrl('voice/narrate'), {
         method: 'POST',
         headers: {
           Accept: 'application/json',

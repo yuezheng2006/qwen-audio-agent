@@ -8,10 +8,10 @@ import { VoiceBoxSynthesizer } from '../src/voice/cascade/adapters/voicebox-tts.
 import { MacOsSaySynthesizer } from '../src/voice/cascade/adapters/macos-say-tts.mjs'
 import { getCascadeTtsPlatformMetadata } from '../../shared/cascade-tts-plugins.mjs'
 
-test('tts registry lists dashscope voicebox fish listenhub minimax', () => {
+test('tts registry lists hosted and local TTS plugins', () => {
   assert.deepEqual(
     listTtsProviders().sort(),
-    ['dashscope', 'fish', 'listenhub', 'macos-say', 'minimax', 'voicebox'],
+    ['breeze', 'dashscope', 'firered', 'fish', 'listenhub', 'macos-say', 'minimax', 'voicebox'],
   )
 })
 

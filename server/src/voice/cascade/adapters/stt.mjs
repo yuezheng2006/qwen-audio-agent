@@ -1,6 +1,10 @@
 import { DashScopeTask } from './dashscope-ws.mjs'
 import { createPluginHost } from '../../../plugins/host.mjs'
 import { createFasterWhisperPlugin } from '../../../plugins/builtin/faster-whisper.mjs'
+import {
+  fireRedAsrPlugin,
+  hojoAsrPlugin,
+} from '../../../plugins/builtin/local-http-asr.mjs'
 
 // Streaming STT adapter contract: one recognizer per utterance.
 //
@@ -114,7 +118,11 @@ const sttPluginHost = createPluginHost({
   context: { registerSttProvider },
 })
 sttPluginHost.register(createFasterWhisperPlugin())
+sttPluginHost.register(fireRedAsrPlugin)
+sttPluginHost.register(hojoAsrPlugin)
 void sttPluginHost.activate('qwaudio.stt.faster-whisper')
+void sttPluginHost.activate('qwaudio.stt.firered')
+void sttPluginHost.activate('qwaudio.stt.hojo')
 
 export function createRecognizer(cascadeConfig, handlers) {
   const factory = STT_PROVIDERS[cascadeConfig.stt.provider]

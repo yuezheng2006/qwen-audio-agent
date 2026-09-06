@@ -250,6 +250,56 @@ registerCascadeTtsPlugin({
 })
 
 registerCascadeTtsPlugin({
+  id: 'firered',
+  platform: {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize'],
+    runtime: 'local-sidecar',
+    dataBoundary: 'local',
+  },
+  aliases: ['fireredtts', 'firered-tts'],
+  preserve: true,
+  cascadeLabel: 'Cascade（VAD→STT→LLM→FireRedTTS2）',
+  envKeys: ['FIRERED_TTS_URL', 'FIRERED_TTS_MODEL'],
+  resolveConfig(env, { sharedKey }) {
+    return {
+      model: env.CASCADE_TTS_MODEL || env.FIRERED_TTS_MODEL || 'FireRedTTS2',
+      voice: env.CASCADE_TTS_VOICE_ID || env.CASCADE_TTS_VOICE || '',
+      apiKey: env.CASCADE_TTS_API_KEY || sharedKey,
+      fireRedBaseUrl: trimUrl(env.FIRERED_TTS_URL, 'http://127.0.0.1:8787'),
+    }
+  },
+  displayName(id) {
+    return shortLabel('FireRed', id)
+  },
+})
+
+registerCascadeTtsPlugin({
+  id: 'breeze',
+  platform: {
+    platformApiVersion: '0.1',
+    platformCapabilities: ['speech.synthesize', 'speech.streaming'],
+    runtime: 'local-native',
+    dataBoundary: 'local',
+  },
+  aliases: ['breezetts', 'breeze-tts', 'breeze-tts-2'],
+  preserve: true,
+  cascadeLabel: 'Cascade（VAD→STT→LLM→Breeze-TTS-2）',
+  envKeys: ['BREEZE_TTS_URL', 'BREEZE_TTS_MODEL'],
+  resolveConfig(env, { sharedKey }) {
+    return {
+      model: env.CASCADE_TTS_MODEL || env.BREEZE_TTS_MODEL || 'Breeze-TTS-2',
+      voice: env.CASCADE_TTS_VOICE_ID || env.CASCADE_TTS_VOICE || '',
+      apiKey: env.CASCADE_TTS_API_KEY || sharedKey,
+      breezeBaseUrl: trimUrl(env.BREEZE_TTS_URL, 'http://127.0.0.1:8788'),
+    }
+  },
+  displayName(id) {
+    return shortLabel('Breeze', id)
+  },
+})
+
+registerCascadeTtsPlugin({
   id: 'listenhub',
   platform: {
     platformApiVersion: '0.1',

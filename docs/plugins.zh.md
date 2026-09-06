@@ -49,6 +49,13 @@ export function activate({ registerTool, plugin }) {
 `{ "text": "..." }`。配置 `CASCADE_STT_PROVIDER=faster-whisper` 和
 `CASCADE_STT_URL=http://127.0.0.1:8000/transcribe` 即可启用。
 
+同一条本地 sidecar 边界也支持 `firered` 与 `hojo` ASR：分别配置
+`FIRERED_ASR_URL` / `HOJO_ASR_URL`，Gateway 会发送 PCM16 WAV，并读取
+`{ "text": "..." }`。FireRedTTS2 与 Apple Silicon 上的 Breeze-TTS-2
+流式运行器可分别通过 `firered`、`breeze` 作为 TTS provider 接入，使用
+`FIRERED_TTS_URL` / `BREEZE_TTS_URL` 的统一 `POST /v1/tts` 合同；模型进程
+留在 Gateway 外部，保持跨平台插件边界。
+
 仓库提供了最小本地服务入口：
 
 ```bash

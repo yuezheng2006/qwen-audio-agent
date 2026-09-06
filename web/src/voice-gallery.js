@@ -1,4 +1,6 @@
 /** Curated celebrity clones (denoise finals). Non-denoise variants are drafts. */
+import { apiUrl } from './app-paths.js'
+
 export const CURATED_CELEB_NAMES = [
   '刘震云',
   '罗永浩',
@@ -65,7 +67,7 @@ export function friendlyVoiceName(profile) {
 export function previewUrlFor(profile) {
   if (profile?.preview_url) return profile.preview_url
   if (profile?.has_preview && profile?.id) {
-    return `api/voice/profiles/${encodeURIComponent(profile.id)}/preview`
+    return apiUrl(`voice/profiles/${encodeURIComponent(profile.id)}/preview`)
   }
   return ''
 }

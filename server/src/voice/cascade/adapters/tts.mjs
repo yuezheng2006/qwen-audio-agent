@@ -7,6 +7,7 @@ import { createListenHubSynthesizer } from './listenhub-tts.mjs'
 import { createMinimaxSynthesizer } from './minimax-tts.mjs'
 import { createVoiceBoxSynthesizer } from './voicebox-tts.mjs'
 import { createMacOsSaySynthesizer } from './macos-say-tts.mjs'
+import { createLocalHttpTtsSynthesizer } from './local-http-tts.mjs'
 
 // Streaming TTS adapter contract: one synthesizer per response.
 //
@@ -111,6 +112,20 @@ export const TTS_PROVIDERS = {
   ),
   'macos-say': (cascadeConfig, handlers) => (
     createMacOsSaySynthesizer(cascadeConfig, handlers)
+  ),
+  firered: (cascadeConfig, handlers) => (
+    createLocalHttpTtsSynthesizer(cascadeConfig, handlers, {
+      provider: 'firered',
+      baseUrlKey: 'fireRedBaseUrl',
+      defaultBaseUrl: 'http://127.0.0.1:8787',
+    })
+  ),
+  breeze: (cascadeConfig, handlers) => (
+    createLocalHttpTtsSynthesizer(cascadeConfig, handlers, {
+      provider: 'breeze',
+      baseUrlKey: 'breezeBaseUrl',
+      defaultBaseUrl: 'http://127.0.0.1:8788',
+    })
   ),
 }
 

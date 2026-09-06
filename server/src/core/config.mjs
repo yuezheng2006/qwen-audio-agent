@@ -229,11 +229,21 @@ export function resolveCascadeConfig(env = process.env) {
       provider: (env.CASCADE_STT_PROVIDER || 'dashscope').toLowerCase(),
       // DashScope inference duplex ASR。官方实时推荐 qwen-audio-3.0-asr-flash-streaming；
       // fun-asr-realtime 仍可用但部分快照将下线；qwen3-asr-flash(-realtime) 非此协议。
-      model: env.CASCADE_STT_MODEL || 'qwen-audio-3.0-asr-flash-streaming',
+      model: env.CASCADE_STT_MODEL
+        || (String(env.CASCADE_STT_PROVIDER || '').toLowerCase() === 'firered'
+          ? 'FireRedASR2-AED'
+          : String(env.CASCADE_STT_PROVIDER || '').toLowerCase() === 'hojo'
+            ? 'HojoAI/Hojo-ASR-Multi-V1'
+            : 'qwen-audio-3.0-asr-flash-streaming'),
       apiKey: env.CASCADE_STT_API_KEY || sharedKey,
       // Local STT plugins, such as faster-whisper, expose a simple utterance
       // endpoint instead of requiring their runtime inside the Gateway.
-      url: env.CASCADE_STT_URL || '',
+      url: env.CASCADE_STT_URL
+        || (String(env.CASCADE_STT_PROVIDER || '').toLowerCase() === 'firered'
+          ? env.FIRERED_ASR_URL || ''
+          : String(env.CASCADE_STT_PROVIDER || '').toLowerCase() === 'hojo'
+            ? env.HOJO_ASR_URL || ''
+            : ''),
       sampleRate: numberSetting(env.CASCADE_STT_SAMPLE_RATE, 16000, {
         min: 8000,
         max: 48000,
@@ -324,10 +334,20 @@ export const config = {
       silenceMs: numberSetting(process.env.CASCADE_VAD_SILENCE_MS, 700, { min: 100 }),
     },
     stt: {
-      provider: process.env.CASCADE_STT_PROVIDER || 'dashscope',
-      model: process.env.CASCADE_STT_MODEL || 'qwen-audio-3.0-asr-flash-streaming',
+      provider: (process.env.CASCADE_STT_PROVIDER || 'dashscope').toLowerCase(),
+      model: process.env.CASCADE_STT_MODEL
+        || (String(process.env.CASCADE_STT_PROVIDER || '').toLowerCase() === 'firered'
+          ? 'FireRedASR2-AED'
+          : String(process.env.CASCADE_STT_PROVIDER || '').toLowerCase() === 'hojo'
+            ? 'HojoAI/Hojo-ASR-Multi-V1'
+            : 'qwen-audio-3.0-asr-flash-streaming'),
       apiKey: process.env.CASCADE_STT_API_KEY || realtimeFrontend.dashscopeApiKey,
-      url: process.env.CASCADE_STT_URL || '',
+      url: process.env.CASCADE_STT_URL
+        || (String(process.env.CASCADE_STT_PROVIDER || '').toLowerCase() === 'firered'
+          ? process.env.FIRERED_ASR_URL || ''
+          : String(process.env.CASCADE_STT_PROVIDER || '').toLowerCase() === 'hojo'
+            ? process.env.HOJO_ASR_URL || ''
+            : ''),
     },
     llm: {
       model: process.env.CASCADE_LLM_MODEL || 'qwen-flash',

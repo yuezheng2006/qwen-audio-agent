@@ -70,11 +70,11 @@ test('preview download uses friendly wav name', () => {
   assert.equal(previewUrlFor({
     id: 'p1',
     has_preview: true,
-  }), 'api/voice/profiles/p1/preview')
+  }), '/api/voice/profiles/p1/preview')
   assert.equal(previewDownloadHref({
     id: 'p1',
     has_preview: true,
-  }), 'api/voice/profiles/p1/preview?download=1')
+  }), '/api/voice/profiles/p1/preview?download=1')
   assert.equal(previewDownloadFilename({ label: '雷军·年度演讲·降噪' }), '雷军.wav')
   assert.equal(previewDownloadFilename({ label: '我的克隆' }), '我的克隆.wav')
   assert.equal(previewDownloadHref({ id: 'x' }), '')

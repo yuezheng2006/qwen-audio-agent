@@ -8,6 +8,7 @@ import {
   previewUrlFor,
 } from './voice-gallery.js'
 import { voiceAvatarLabel, voiceAvatarTone } from './voice-preview-player.js'
+import { apiUrl } from './app-paths.js'
 
 function canPreviewProvider(provider, voiceCapabilities) {
   if (voiceCapabilities?.providers?.length) {
@@ -31,7 +32,7 @@ function waitForHealth(match, { timeoutMs = 25000 } = {}) {
     while (Date.now() < deadline) {
       await new Promise(resolve => setTimeout(resolve, 500))
       try {
-        const health = await readJson(await fetch('api/health'))
+        const health = await readJson(await fetch(apiUrl('health')))
         if (match(health)) return health
       } catch {
         // gateway restarting
@@ -108,8 +109,8 @@ export default function VoiceGallery({
 
   const refreshVoiceProfiles = useCallback(async () => {
     const [profilesResult, capsResult] = await Promise.allSettled([
-      fetch('api/voice/profiles'),
-      fetch('api/voice/capabilities'),
+      fetch(apiUrl('voice/profiles')),
+      fetch(apiUrl('voice/capabilities')),
     ])
     if (profilesResult.status === 'rejected') throw profilesResult.reason
     const profilesRes = profilesResult.value
@@ -253,7 +254,7 @@ export default function VoiceGallery({
       stopPreview()
       onModeSwitching?.(true)
       try {
-        await readJson(await fetch('api/voice/confirm', {
+        await readJson(await fetch(apiUrl('voice/confirm'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ profile_id: profile.id, restart: false }),
@@ -288,7 +289,7 @@ export default function VoiceGallery({
     const name = friendlyVoiceName(profile)
     if (!globalThis.confirm?.(`删除音色“${name}”？此操作只删除本机 Profile，不会撤销远端 provider 的 Voice ID。`)) return
     await run(async () => {
-      const response = await fetch(`api/voice/profiles/${encodeURIComponent(profile.id)}`, {
+      const response = await fetch(apiUrl(`voice/profiles/${encodeURIComponent(profile.id)}`), {
         method: 'DELETE',
       })
       await readJson(response)

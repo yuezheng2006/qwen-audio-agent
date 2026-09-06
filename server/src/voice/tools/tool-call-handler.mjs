@@ -217,7 +217,6 @@ export class ToolCallHandler {
       [WEB_SEARCH_TOOL_NAME]: context => this.webSearch(context),
       [FETCH_URL_TOOL_NAME]: context => this.fetchUrl(context),
       [KNOWLEDGE_TOOL_NAME]: context => this.knowledge(context),
-      [KNOWLEDGE_SEARCH_TOOL_NAME]: context => this.knowledge(context),
       [RECALL_TOOL_NAME]: ({ callId, turnId, args }) => (
         this.recall(callId, turnId, args)
       ),
@@ -1036,8 +1035,11 @@ export class ToolCallHandler {
       return
     }
 
+    const executionName = toolName === KNOWLEDGE_SEARCH_TOOL_NAME
+      ? KNOWLEDGE_TOOL_NAME
+      : toolName
     const external = this.externalTool(toolName)
-    const tool = frontendToolRegistry.get(toolName) || external?.tool
+    const tool = frontendToolRegistry.get(executionName) || external?.tool
     if (tool) this.activeToolEntries.set(callId, tool)
     const responseId = String(callContext.responseId || event.response_id || '').trim()
     const debug = {
@@ -1076,7 +1078,7 @@ export class ToolCallHandler {
           callContext,
         })
       }
-      const execution = await this.toolExecutor.execute(toolName, {
+      const execution = await this.toolExecutor.execute(executionName, {
         callId,
         turnId,
         generation,

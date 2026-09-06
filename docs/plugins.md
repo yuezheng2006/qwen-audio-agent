@@ -52,6 +52,14 @@ faster-whisper service, which returns `{ "text": "..." }`. Enable it with
 `CASCADE_STT_PROVIDER=faster-whisper` and
 `CASCADE_STT_URL=http://127.0.0.1:8000/transcribe`.
 
+The same local-sidecar boundary is available for `firered` and `hojo` ASR.
+Set `FIRERED_ASR_URL` or `HOJO_ASR_URL`; the Gateway sends a PCM16 WAV
+utterance and accepts `{ "text": "..." }`. FireRedTTS2 and the Apple-Silicon
+Breeze-TTS-2 runner are available as `firered` and `breeze` TTS providers.
+They use `FIRERED_TTS_URL` / `BREEZE_TTS_URL` and a provider-neutral
+`POST /v1/tts` contract, keeping Python/MLX model processes outside the
+Gateway and preserving the cross-platform plugin boundary.
+
 The repository includes a minimal local service:
 
 ```bash

@@ -41,10 +41,10 @@ test('cascade config wires fish s2.1 defaults from FISH_* env', () => {
   assert.equal(cascade.tts.fishLatency, 'balanced')
 })
 
-test('tts registry lists fish alongside dashscope and voicebox', () => {
+test('tts registry lists fish alongside hosted and local plugins', () => {
   assert.deepEqual(
     listTtsProviders().sort(),
-    ['dashscope', 'fish', 'listenhub', 'macos-say', 'minimax', 'voicebox'],
+    ['breeze', 'dashscope', 'firered', 'fish', 'listenhub', 'macos-say', 'minimax', 'voicebox'],
   )
 })
 
