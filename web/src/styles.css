@@ -1964,6 +1964,45 @@ header select.frontend-provider option {
 .recording-indicator.live { color: #ff8f98; }
 .record-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .voice-recorder-actions audio { min-width: 0; width: 100%; height: 34px; }
+.voice-source-switch {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px;
+  border-radius: 8px;
+  background: #0d0e10;
+}
+.voice-source-switch button {
+  min-height: 28px;
+  padding: 5px 11px;
+  border: 0;
+  border-radius: 6px;
+  color: #8d879a;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.voice-source-switch button:hover { color: #e7dfd3; }
+.voice-source-switch button.active { color: #e7dfd3; background: #35242d; }
+.voice-upload-dropzone {
+  display: grid;
+  min-height: 82px;
+  place-items: center;
+  gap: 5px;
+  padding: 14px;
+  border: 1px dashed #765266;
+  border-radius: 9px;
+  color: #d8caca;
+  background: #171216;
+  text-align: center;
+  cursor: pointer;
+}
+.voice-upload-dropzone:hover,
+.voice-upload-dropzone:focus-within { border-color: #d3869b; background: #211820; }
+.voice-upload-dropzone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.voice-upload-dropzone strong { font-size: 12px; font-weight: 550; }
+.voice-upload-dropzone span { color: #8f8185; font-size: 10px; }
+.voice-recorded-audio { width: 100%; height: 34px; }
 .voice-primary-btn,
 .voice-secondary-btn,
 .voice-danger-btn {
@@ -2383,6 +2422,13 @@ header select.frontend-provider option {
 /* VoiceStudio reference layout: dense rail + global bar + full workbench. */
 .voice-studio-app {
   --studio-rail-width: 58px;
+  --studio-canvas: #1d2021;
+  --studio-chrome: #0f1011;
+  --studio-fg: #ebdbb2;
+  --studio-fg-muted: #a89984;
+  --studio-fg-dim: #7c6f64;
+  --studio-brand: #d3869b;
+  --studio-hover: rgba(255, 255, 255, 0.04);
   background: #101010;
 }
 
@@ -2395,10 +2441,17 @@ header select.frontend-provider option {
   backdrop-filter: none;
 }
 
-.voice-studio-app .brand { min-width: 0; gap: 8px; font-size: 12px; }
-.voice-studio-app .brand { display: none; }
-.voice-studio-app .brand > span { width: 26px; height: 26px; border-radius: 8px; }
-.voice-studio-app .brand small { display: none; }
+.voice-studio-app .brand { min-width: 0; gap: 9px; font-size: 12px; color: var(--studio-fg); }
+.voice-studio-app .brand { display: flex; }
+.voice-studio-app .brand > span {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #e6a9ba, #a95173);
+  box-shadow: 0 0 18px rgba(211, 134, 155, .28);
+}
+.voice-studio-app .brand em { color: var(--studio-brand); }
+.voice-studio-app .brand small { display: block; color: var(--studio-fg-dim); }
 .voice-studio-app .backend,
 .voice-studio-app .model-status,
 .voice-studio-app .frontend-provider,
@@ -2411,7 +2464,7 @@ header select.frontend-provider option {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  color: #e7b0c5;
+  color: var(--studio-brand);
   font-size: 14px;
   font-weight: 650;
   letter-spacing: .02em;

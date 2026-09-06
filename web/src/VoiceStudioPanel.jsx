@@ -68,6 +68,7 @@ function RecordingClipEditor({ onSampleReady }) {
   const [sampleBlob, setSampleBlob] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [sourceMode, setSourceMode] = useState('record')
   const recorderRef = useRef(null)
   const streamRef = useRef(null)
   const chunksRef = useRef([])
@@ -83,6 +84,27 @@ function RecordingClipEditor({ onSampleReady }) {
   const stopTracks = () => {
     streamRef.current?.getTracks().forEach(track => track.stop())
     streamRef.current = null
+  }
+
+  const acceptAudioBlob = blob => {
+    if (!blob) return
+    const url = URL.createObjectURL(blob)
+    setRawUrl(current => {
+      if (current) URL.revokeObjectURL(current)
+      return url
+    })
+    const audio = new Audio(url)
+    audio.preload = 'metadata'
+    const setAudioDuration = () => {
+      const nextDuration = Number.isFinite(audio.duration) ? audio.duration : elapsed
+      setDuration(nextDuration)
+      setClip({ start: 0, end: nextDuration })
+    }
+    audio.onloadedmetadata = setAudioDuration
+    audio.onerror = () => setAudioDuration()
+    setRawBlob(blob)
+    setSampleBlob(blob)
+    setClipUrl('')
   }
 
   const startRecording = async () => {
@@ -103,20 +125,7 @@ function RecordingClipEditor({ onSampleReady }) {
       }
       recorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
-        const url = URL.createObjectURL(blob)
-        setRawUrl(current => {
-          if (current) URL.revokeObjectURL(current)
-          return url
-        })
-        const audio = new Audio(url)
-        audio.onloadedmetadata = () => {
-          const nextDuration = Number.isFinite(audio.duration) ? audio.duration : elapsed
-          setDuration(nextDuration)
-          setClip({ start: 0, end: nextDuration })
-        }
-        setRawBlob(blob)
-        setSampleBlob(blob)
-        setClipUrl('')
+        acceptAudioBlob(blob)
         setRecording(false)
         stopTracks()
       }
@@ -131,6 +140,18 @@ function RecordingClipEditor({ onSampleReady }) {
         ? '录音权限被拒绝，请在浏览器设置中允许麦克风。'
         : '无法开始录音，请检查麦克风设备。')
     }
+  }
+
+  const ingestAudioFile = event => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('audio/') && !/\.(wav|mp3|m4a|flac|ogg|aac|webm)$/i.test(file.name)) {
+      setError('请选择 WAV、MP3、M4A、FLAC、OGG 或 WebM 音频。')
+      return
+    }
+    setError('')
+    acceptAudioBlob(file)
   }
 
   const stopRecording = () => {
@@ -192,17 +213,32 @@ function RecordingClipEditor({ onSampleReady }) {
           {recording ? `录音中 ${formatRecordingTime(elapsed)}` : duration ? `样本 ${formatRecordingTime(duration)}` : '未录音'}
         </span>
       </div>
-      <div className="voice-recorder-actions">
-        <button
-          type="button"
-          className={recording ? 'voice-danger-btn' : 'voice-primary-btn'}
-          onClick={recording ? stopRecording : startRecording}
-        >
-          <span className="record-dot" aria-hidden="true" />
-          {recording ? '停止录音' : '开始录音'}
-        </button>
-        {rawUrl && <audio controls src={clipUrl || rawUrl} />}
-      </div>
+      {!rawBlob && !recording && (
+        <div className="voice-source-switch" role="tablist" aria-label="声音样本来源">
+          <button type="button" role="tab" aria-selected={sourceMode === 'record'} className={sourceMode === 'record' ? 'active' : ''} onClick={() => setSourceMode('record')}>录音</button>
+          <button type="button" role="tab" aria-selected={sourceMode === 'upload'} className={sourceMode === 'upload' ? 'active' : ''} onClick={() => setSourceMode('upload')}>上传音频</button>
+        </div>
+      )}
+      {sourceMode === 'record' && (
+        <div className="voice-recorder-actions">
+          <button
+            type="button"
+            className={recording ? 'voice-danger-btn' : 'voice-primary-btn'}
+            onClick={recording ? stopRecording : startRecording}
+          >
+            <span className="record-dot" aria-hidden="true" />
+            {recording ? '停止录音' : '开始录音'}
+          </button>
+        </div>
+      )}
+      {sourceMode === 'upload' && !rawBlob && (
+        <label className="voice-upload-dropzone">
+          <input type="file" accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg,.aac,.webm" onChange={ingestAudioFile} />
+          <strong>选择或拖入音频文件</strong>
+          <span>支持 WAV、MP3、M4A、FLAC、OGG、WebM</span>
+        </label>
+      )}
+      {rawBlob && rawUrl && <audio className="voice-recorded-audio" controls src={clipUrl || rawUrl} />}
       {duration > 0 && !recording && (
         <div className="voice-clip-editor">
           <div className="voice-clip-track" aria-hidden="true">
