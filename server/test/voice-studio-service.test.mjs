@@ -287,6 +287,7 @@ test('confirm resets the model when switching providers without a profile target
       provider: 'fish',
       model: 's2.1-pro-free',
       voice: 'ref-1',
+      voiceLabel: 'Fish 音色',
     }])
   } finally {
     rmSync(dir, { recursive: true, force: true })
