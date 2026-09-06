@@ -1,7 +1,8 @@
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use tauri::Manager;
+use std::sync::{Mutex, OnceLock};
+use tauri::{Manager, RunEvent};
 
 #[derive(Debug, Serialize)]
 struct ClientInfo {
@@ -27,6 +28,12 @@ struct GatewayCommandResult {
     action: String,
     output: String,
     error: Option<String>,
+}
+
+static GATEWAY_STARTED_BY_CLIENT: OnceLock<Mutex<bool>> = OnceLock::new();
+
+fn gateway_started_by_client() -> &'static Mutex<bool> {
+    GATEWAY_STARTED_BY_CLIENT.get_or_init(|| Mutex::new(false))
 }
 
 fn runtime_root(app: Option<&tauri::AppHandle>) -> PathBuf {
@@ -126,6 +133,10 @@ fn run_gateway_action(action: &str, root: &Path) -> GatewayCommandResult {
     }
 }
 
+fn gateway_was_started_by_client(result: &GatewayCommandResult) -> bool {
+    result.ok && result.action == "start" && result.output.contains("gateway 已启动")
+}
+
 #[tauri::command]
 fn client_info() -> ClientInfo {
     ClientInfo {
@@ -183,8 +194,10 @@ async fn gateway_health(base_url: Option<String>) -> GatewayHealth {
 }
 
 #[tauri::command]
-async fn gateway_start(app: tauri::AppHandle) -> GatewayCommandResult {
-    tauri::async_runtime::spawn_blocking(move || {
+async fn gateway_start(
+    app: tauri::AppHandle,
+) -> GatewayCommandResult {
+    let result = tauri::async_runtime::spawn_blocking(move || {
         let root = runtime_root(Some(&app));
         run_gateway_action("start", &root)
     })
@@ -194,12 +207,20 @@ async fn gateway_start(app: tauri::AppHandle) -> GatewayCommandResult {
         action: "start".to_string(),
         output: String::new(),
         error: Some(error.to_string()),
-    })
+    });
+    if gateway_was_started_by_client(&result) {
+        if let Ok(mut started) = gateway_started_by_client().lock() {
+            *started = true;
+        }
+    }
+    result
 }
 
 #[tauri::command]
-async fn gateway_stop(app: tauri::AppHandle) -> GatewayCommandResult {
-    tauri::async_runtime::spawn_blocking(move || {
+async fn gateway_stop(
+    app: tauri::AppHandle,
+) -> GatewayCommandResult {
+    let result = tauri::async_runtime::spawn_blocking(move || {
         let root = runtime_root(Some(&app));
         run_gateway_action("stop", &root)
     })
@@ -209,7 +230,13 @@ async fn gateway_stop(app: tauri::AppHandle) -> GatewayCommandResult {
         action: "stop".to_string(),
         output: String::new(),
         error: Some(error.to_string()),
-    })
+    });
+    if result.ok {
+        if let Ok(mut started) = gateway_started_by_client().lock() {
+            *started = false;
+        }
+    }
+    result
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -231,13 +258,26 @@ pub fn run() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if !matches!(event, RunEvent::Exit) {
+                return;
+            }
+            let should_stop = gateway_started_by_client()
+                .lock()
+                .map(|started| *started)
+                .unwrap_or(false);
+            if should_stop {
+                let root = runtime_root(Some(app));
+                let _ = run_gateway_action("stop", &root);
+            }
+        });
 }
 
 #[cfg(test)]
 mod tests {
-    use super::gateway_action_args;
+    use super::{gateway_action_args, gateway_was_started_by_client, GatewayCommandResult};
 
     #[test]
     fn gateway_actions_are_fixed_to_the_local_runtime_contract() {
@@ -250,5 +290,27 @@ mod tests {
             Some(vec!["scripts/start-gateway.mjs", "stop"])
         );
         assert_eq!(gateway_action_args("restart"), None);
+    }
+
+    #[test]
+    fn only_a_successful_client_start_claims_gateway_ownership() {
+        assert!(gateway_was_started_by_client(&GatewayCommandResult {
+            ok: true,
+            action: "start".to_string(),
+            output: "gateway 已启动\n  pid: 123".to_string(),
+            error: None,
+        }));
+        assert!(!gateway_was_started_by_client(&GatewayCommandResult {
+            ok: true,
+            action: "start".to_string(),
+            output: "gateway 已在运行".to_string(),
+            error: None,
+        }));
+        assert!(!gateway_was_started_by_client(&GatewayCommandResult {
+            ok: false,
+            action: "start".to_string(),
+            output: "gateway 已启动".to_string(),
+            error: Some("failed".to_string()),
+        }));
     }
 }
