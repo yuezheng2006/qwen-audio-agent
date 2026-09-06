@@ -13,8 +13,10 @@
     "windows": [
       {
         "title": "聆界 · Lingora",
-        "width": 800,
-        "height": 600,
+        "width": 1280,
+        "height": 820,
+        "minWidth": 980,
+        "minHeight": 680,
         "resizable": true,
         "fullscreen": false
       }
