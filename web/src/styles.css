@@ -2448,12 +2448,19 @@ header select.frontend-provider option {
 .voice-studio-app .workspace-voice-studio {
   width: calc(100% - var(--studio-rail-width)) !important;
   height: calc(100dvh - 48px);
+  min-height: 0;
   margin: 0 0 0 var(--studio-rail-width);
   padding: 0 18px 18px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .voice-studio-app .workspace-voice-studio > .voice-studio-drawer > .voice-studio-panel {
+  height: auto;
+  min-height: 100%;
   padding: 18px 0 28px;
+  overflow: visible;
 }
 .voice-studio-app .voice-studio-header {
   min-height: 42px;
