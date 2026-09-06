@@ -143,6 +143,19 @@ async function waitHealthy(timeoutMs = 20000) {
 
 async function startGateway(modeArg) {
   const mode = resolveGatewayMode(modeArg)
+  const existingHealth = await fetchHealth()
+  if (existingHealth?.ok) {
+    const existingMode = existsSync(modePath)
+      ? readFileSync(modePath, 'utf8').trim()
+      : '(unknown)'
+    process.stdout.write(`gateway 已在运行
+  mode:     ${existingMode}
+  url:      ${publicUrl}
+  provider: ${existingHealth.realtimeProvider || '(unknown)'}
+`)
+    return
+  }
+
   // Persist + re-read so shell-exported stale TTS vars cannot override config.env.
   persistGatewayMode(mode)
   const fileEnv = readEnvFile(resolveUserConfigPath())
@@ -152,7 +165,7 @@ async function startGateway(modeArg) {
   const ttsVoice = fileEnv.CASCADE_TTS_VOICE_ID || modeEnv.CASCADE_TTS_VOICE_ID || info.voice
   const ttsLabel = voiceDisplayName(ttsVoice, { provider: ttsProvider })
 
-  if (isAlive(readPid()) || await fetchHealth()) {
+  if (isAlive(readPid())) {
     await stopGateway({ quiet: true })
     await sleep(400)
   }
