@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import * as Tabs from '@radix-ui/react-tabs'
 import {
   ChevronDown,
   FileText,
@@ -652,19 +651,26 @@ export default function VoiceStudioPanel({
           </div>
         </header>
 
-        <Tabs.Root
-          className="voice-studio-tabs"
-          value={view}
-          onValueChange={setView}
-        >
-          <Tabs.List aria-label="语音工作室工作区">
-            <Tabs.Trigger value="launchpad">工作室</Tabs.Trigger>
-            <Tabs.Trigger value="gallery">声音库</Tabs.Trigger>
-            <Tabs.Trigger value="clone">克隆</Tabs.Trigger>
-            <Tabs.Trigger value="dub">配音</Tabs.Trigger>
-            <Tabs.Trigger value="catalogue">模型</Tabs.Trigger>
-          </Tabs.List>
-        </Tabs.Root>
+        <nav className="voice-studio-tabs" aria-label="语音工作室工作区" role="tablist">
+          {[
+            ['launchpad', '工作室'],
+            ['gallery', '声音库'],
+            ['clone', '克隆'],
+            ['dub', '配音'],
+            ['catalogue', '模型'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={view === value}
+              tabIndex={view === value ? 0 : -1}
+              onClick={() => setView(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
 
         {view === 'launchpad' && (
           <StudioWorkbench
