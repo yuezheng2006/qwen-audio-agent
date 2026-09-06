@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Grid2X2, List, Search } from 'lucide-react'
 import {
   friendlyVoiceName,
   organizeVoiceProfiles,
@@ -73,6 +74,7 @@ export default function VoiceGallery({
   const [voiceCapabilities, setVoiceCapabilities] = useState(null)
   const [galleryQuery, setGalleryQuery] = useState('')
   const [galleryShowAll, setGalleryShowAll] = useState(false)
+  const [galleryView, setGalleryView] = useState('grid')
   const [previewingId, setPreviewingId] = useState('')
   const [previewPhase, setPreviewPhase] = useState('idle') // idle | playing
   const [busy, setBusy] = useState(false)
@@ -313,8 +315,24 @@ export default function VoiceGallery({
           <p>浏览、试听并选用你的 Agent 音色。</p>
         </div>
         <div className="voice-gallery-view-toggle" aria-label="视图切换">
-          <button type="button" className="active" aria-label="卡片视图">▦</button>
-          <button type="button" aria-label="列表视图">☷</button>
+          <button
+            type="button"
+            className={galleryView === 'grid' ? 'active' : ''}
+            aria-label="卡片视图"
+            aria-pressed={galleryView === 'grid'}
+            onClick={() => setGalleryView('grid')}
+          >
+            <Grid2X2 size={14} strokeWidth={1.8} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={galleryView === 'list' ? 'active' : ''}
+            aria-label="列表视图"
+            aria-pressed={galleryView === 'list'}
+            onClick={() => setGalleryView('list')}
+          >
+            <List size={15} strokeWidth={1.8} aria-hidden="true" />
+          </button>
         </div>
       </div>
 
@@ -345,7 +363,7 @@ export default function VoiceGallery({
             <>
               <div className="voice-gallery-toolbar">
                 <label className="voice-gallery-search-wrap">
-                  <span className="voice-gallery-search-icon" aria-hidden="true">⌕</span>
+                  <Search className="voice-gallery-search-icon" size={14} strokeWidth={1.8} aria-hidden="true" />
                   <input
                     className="voice-gallery-search"
                     value={galleryQuery}
@@ -365,7 +383,7 @@ export default function VoiceGallery({
                 </label>
               </div>
 
-              <div className="voice-row-list" role="list">
+              <div className={`voice-row-list${galleryView === 'list' ? ' list-view' : ''}`} role="list">
                 {!visibleVoiceProfiles.length && (
                   <p className="voice-studio-note">
                     {galleryQuery.trim()
