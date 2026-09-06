@@ -219,6 +219,7 @@ export function releasesManualInputGuard(event, turnId = '') {
 export default function useRealtimeVoice({
   sessionId,
   enabled,
+  connect = true,
   suspended = false,
   outputMuted = false,
   inputOnlyMute = false,
@@ -587,6 +588,20 @@ export default function useRealtimeVoice({
   }, [suspended])
 
   useEffect(() => {
+    if (!connect) {
+      dispatchClientState({
+        type: GatewayServerEvent.VOICE_STATE,
+        state: 'idle',
+      })
+      dispatchClientState({
+        type: GatewayServerEvent.VOICE_CONNECTION,
+        state: 'hidden',
+      })
+      setInputReady(false)
+      setError('')
+      setVisualError(false)
+      return undefined
+    }
     const mutedResponses = mutedPlaybackResponses.current
     const handleEvent = event => {
       dispatchClientState(event)
@@ -735,6 +750,7 @@ export default function useRealtimeVoice({
     clientLabel,
     clientStatesSignature,
     clientType,
+    connect,
     consumeMutedAudio,
     finishMutedAudio,
     inputOnlyMute,
@@ -756,7 +772,7 @@ export default function useRealtimeVoice({
   }, [sessionId])
 
   useEffect(() => {
-    if (!enabled || suspended) {
+    if (!connect || !enabled || suspended) {
       inputReadyRef.current = false
       setInputReady(false)
       sendSocketEvent(microphoneControlEvent({
@@ -887,6 +903,7 @@ export default function useRealtimeVoice({
     }
   }, [
     activateAudio,
+    connect,
     enabled,
     inputOnlyMute,
     sendSocketEvent,

@@ -796,6 +796,9 @@ export default function App() {
   )
   const voice = useRealtimeVoice({
     sessionId,
+    // VoiceStudio is a browsing/configuration surface. It must not claim the
+    // Gateway's single realtime client slot until the user enters chat.
+    connect: desktopOrbMode || !showVoiceStudio,
     enabled: voiceEnabled || voiceEnabledForWakeWord,
     suspended: desktopOrbMode && desktopLifecycle === 'hidden' && !wakeWordEnabled,
     outputMuted: false,
@@ -830,7 +833,9 @@ export default function App() {
     desktopOrbMode && desktopLifecycle !== 'active'
   )
   const voiceConnectionError = (
-    !lifecycleTransition && voice.connectionState === 'unavailable'
+    !showVoiceStudio
+    && !lifecycleTransition
+    && voice.connectionState === 'unavailable'
   )
   const desktopRuntime = resolveDesktopRuntime({
     gateway: gatewayRuntime,
