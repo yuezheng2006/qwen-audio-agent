@@ -8,7 +8,10 @@ export function createWebSearchProvider(config, options = {}) {
   if (provider === 'bing') {
     return new BingWebSearchProvider(options)
   }
-  if (provider === 'so360') {
+  // `ddgs` was the historical default before the lightweight fallback
+  // provider moved to 360. Keep the old config key loadable so an existing
+  // installation does not fail during Gateway bootstrap.
+  if (provider === 'so360' || provider === 'ddgs') {
     return new So360WebSearchProvider(options)
   }
   if (provider === 'mcp' || provider === 'bailian') {

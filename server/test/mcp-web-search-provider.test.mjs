@@ -179,6 +179,9 @@ test('factory selects only configured built-in search adapters', () => {
   assert.equal(createWebSearchProvider({
     webSearchProvider: 'so360',
   }).describe().key, 'so360')
+  assert.equal(createWebSearchProvider({
+    webSearchProvider: 'ddgs',
+  }).describe().key, 'so360')
   const provider = createWebSearchProvider({
     webSearchProvider: 'mcp',
     webSearchMcpUrl: 'https://search.example/mcp',

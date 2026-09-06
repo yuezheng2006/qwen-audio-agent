@@ -77,6 +77,12 @@ test('uses a key-free fallback until the user configures a search provider', () 
   )
 })
 
+test('normalizes the historical ddgs web search provider alias', () => {
+  assert.equal(resolveWebSearchConfiguration({
+    QWEN_AUDIO_WEB_SEARCH_PROVIDER: 'ddgs',
+  }).provider, 'so360')
+})
+
 test('uses the shared user data workspace for the default OpenCode workspace', () => {
   const directory = resolve('/home/user/.config/qwaudio')
   assert.equal(

@@ -113,7 +113,10 @@ export function resolveWebSearchConfiguration(env = process.env) {
   const requestedProvider = String(
     env.QWEN_AUDIO_WEB_SEARCH_PROVIDER || '',
   ).trim().toLowerCase()
-  const provider = requestedProvider || (explicitMcpUrl ? 'mcp' : 'so360')
+  const requestedProviderId = requestedProvider === 'ddgs'
+    ? 'so360'
+    : requestedProvider
+  const provider = requestedProviderId || (explicitMcpUrl ? 'mcp' : 'so360')
   if (!['bailian', 'bing', 'mcp', 'none', 'so360'].includes(provider)) {
     throw new Error(
       '不支持的 Web Search Provider：'
@@ -679,7 +682,7 @@ export const config = {
     8000,
     { min: 1000 },
   ),
-  webSearchProvider: String(process.env.WEB_SEARCH_PROVIDER || 'ddgs').trim().toLowerCase(),
+  webSearchProvider: String(process.env.WEB_SEARCH_PROVIDER || 'so360').trim().toLowerCase(),
   weatherProvider: String(process.env.WEATHER_PROVIDER || 'open-meteo').trim().toLowerCase(),
   mem0: {
     apiKey: process.env.MEM0_API_KEY || '',
