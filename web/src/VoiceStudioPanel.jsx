@@ -466,7 +466,9 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
         setProfiles(nextProfiles)
         const activeId = payload.active?.voice
         const active = nextProfiles.find(profile => profile.remote_voice_id === activeId)
-        setSelectedProfile(active || nextProfiles[0] || null)
+        // Do not silently turn the first gallery item into the active voice.
+        // The Gateway may be using a local/system voice that has no profile.
+        setSelectedProfile(active || null)
       })
       .catch(() => {})
     return () => { cancelled = true }
@@ -479,7 +481,10 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
     return value.includes(query.trim().toLowerCase())
   })
   const selectedName = selectedProfile ? friendlyVoiceName(selectedProfile) : (
-    runtime?.cascade?.voiceLabel || runtime?.realtimeVoiceLabel || '未选择声音'
+    runtime?.cascade?.voiceLabel
+      || runtime?.realtimeVoiceLabel
+      || runtime?.cascade?.voice
+      || '未选择声音'
   )
 
   const generateAudio = async () => {
