@@ -626,6 +626,20 @@ export const config = {
     ? resolve(process.env.KNOWLEDGE_DIR)
     : runtimeEnvironment.knowledgeDir,
   knowledgeDefaultKbId: process.env.KNOWLEDGE_DEFAULT_KB || 'default',
+  // The domain library is opt-in, but its default location is still part of
+  // the stable backend workspace contract so an enabled instance can be
+  // consumed by any backend without a per-host path override.
+  domainLibraryEnabled: String(
+    process.env.QWEN_AUDIO_DOMAIN_LIBRARY || 'off',
+  ).toLowerCase() === 'on',
+  domainDocumentDirectory: resolve(
+    runtimeEnvironment.dataDirectory,
+    'workspace/domain',
+  ),
+  domainIndexPath: resolve(
+    runtimeEnvironment.dataDirectory,
+    'domain-index.json',
+  ),
   contentDir: process.env.CONTENT_DIR
     ? resolve(process.env.CONTENT_DIR)
     : runtimeEnvironment.contentDir,
