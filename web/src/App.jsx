@@ -1528,6 +1528,7 @@ export default function App() {
       <VoiceStudioPanel
         open={showVoiceStudio}
         runtime={runtimeSnapshot}
+        nativeGatewayReady={nativeGateway?.reachable === true}
         onRuntimeChange={setRuntimeSnapshot}
         onModeSwitching={() => {}}
       />

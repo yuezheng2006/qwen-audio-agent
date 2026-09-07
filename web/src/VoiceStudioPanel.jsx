@@ -497,7 +497,7 @@ function audioDataUrl(base64) {
   return `data:audio/wav;base64,${base64}`
 }
 
-function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
+function StudioWorkbench({ runtime, nativeGatewayReady, onOpenGallery, onOpenClone }) {
   const [profiles, setProfiles] = useState([])
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [query, setQuery] = useState('')
@@ -515,8 +515,8 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
     let cancelled = false
     const loadProfiles = async () => {
       let lastError
-      for (let attempt = 0; attempt < 8 && !cancelled; attempt += 1) {
-        if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 300))
+      for (let attempt = 0; attempt < 30 && !cancelled; attempt += 1) {
+        if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 400))
         try {
           const response = await fetch(apiUrl('voice/profiles'), { cache: 'no-store' })
           if (!response.ok) throw new Error(`声音库请求失败（${response.status}）`)
@@ -540,7 +540,7 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
     }
     loadProfiles()
     return () => { cancelled = true }
-  }, [runtime?.frontendMode])
+  }, [runtime?.frontendMode, nativeGatewayReady])
 
   const visibleProfiles = profiles.filter(profile => {
     const value = [friendlyVoiceName(profile), profile.provider, profile.label]
@@ -681,6 +681,7 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
 export default function VoiceStudioPanel({
   open,
   runtime,
+  nativeGatewayReady = false,
   onRuntimeChange,
   onModeSwitching,
   initialView = 'launchpad',
@@ -750,6 +751,7 @@ export default function VoiceStudioPanel({
         {view === 'launchpad' && (
           <StudioWorkbench
             runtime={runtime}
+            nativeGatewayReady={nativeGatewayReady}
             onOpenGallery={() => setView('gallery')}
             onOpenClone={() => setView('clone')}
           />

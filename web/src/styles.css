@@ -2501,6 +2501,15 @@ header select.frontend-provider option {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
+.voice-studio-app .workspace-voice-studio > .voice-studio-drawer,
+.voice-studio-app .workspace-voice-studio > .voice-studio-drawer > .voice-studio-panel,
+.voice-studio-app .studio-workbench,
+.voice-studio-app .studio-editor-panel,
+.voice-studio-app .studio-history-panel {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 .voice-studio-app .workspace-voice-studio > .voice-studio-drawer > .voice-studio-panel {
   height: auto;
   min-height: 100%;
@@ -3103,11 +3112,18 @@ header select.frontend-provider option {
   height: 44px;
   margin-top: 10px;
 }
-.voice-studio-app .studio-history-tabs { gap: 5px; margin: 8px 0 22px; }
+.voice-studio-app .studio-history-tabs {
+  gap: 5px;
+  max-width: 100%;
+  margin: 8px 0 22px;
+  overflow-x: hidden;
+  flex-wrap: wrap;
+}
 .voice-studio-app .studio-history-tabs button { padding: 5px 9px; }
 .voice-studio-app .studio-history-list { gap: 7px; }
 .voice-studio-app .studio-history-item { padding: 9px; }
 .voice-studio-app .studio-history-item p { margin: 5px 0; }
+.voice-studio-app .studio-history-panel { overflow: hidden; }
 
 /* Narrow windows keep controls inside the scrollable canvas. */
 .voice-studio-app .studio-control-heading,
