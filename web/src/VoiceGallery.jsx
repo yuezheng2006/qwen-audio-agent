@@ -66,6 +66,7 @@ function DownloadIcon() {
 export default function VoiceGallery({
   open = true,
   runtime,
+  nativeGatewayReady = false,
   onRuntimeChange,
   onModeSwitching,
 }) {
@@ -145,13 +146,25 @@ export default function VoiceGallery({
     if (!open) return undefined
     setError('')
     let cancelled = false
-    refreshVoiceProfiles().catch(err => {
-      if (!cancelled) setError(err.message)
-    })
+    const load = async () => {
+      let lastError
+      for (let attempt = 0; attempt < 30 && !cancelled; attempt += 1) {
+        if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 400))
+        try {
+          await refreshVoiceProfiles()
+          if (!cancelled) setError('')
+          return
+        } catch (err) {
+          lastError = err
+        }
+      }
+      if (!cancelled) setError(lastError?.message || '声音库加载失败，请重试。')
+    }
+    load()
     return () => {
       cancelled = true
     }
-  }, [open, refreshVoiceProfiles])
+  }, [open, nativeGatewayReady, runtime?.frontendMode, refreshVoiceProfiles])
 
   useEffect(() => {
     if (!open) stopPreview()

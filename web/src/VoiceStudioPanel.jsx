@@ -761,6 +761,7 @@ export default function VoiceStudioPanel({
           <VoiceGallery
             open={open && view === 'gallery'}
             runtime={runtime}
+            nativeGatewayReady={nativeGatewayReady}
             onRuntimeChange={onRuntimeChange}
             onModeSwitching={onModeSwitching}
           />
