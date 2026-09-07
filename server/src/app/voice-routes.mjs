@@ -4,6 +4,7 @@ import {
   withPreviewFlag,
 } from '../voice/studio/preview-cache.mjs'
 import { synthesizeNarration } from '../voice/studio/narrate.mjs'
+import { synthesizeStory } from '../voice/studio/story.mjs'
 import {
   friendlyVoiceName,
   resolveAuthorVoice,
@@ -74,6 +75,7 @@ export function registerVoiceRoutes(app, {
   getCascadeTts = () => ({}),
   synthesizePreview = synthesizeVoicePreview,
   synthesizeNarrationFn = synthesizeNarration,
+  synthesizeStoryFn = synthesizeStory,
   previewCache = null,
   voiceProfileDir = '',
   sampleAssetStore = null,
@@ -390,6 +392,85 @@ export function registerVoiceRoutes(app, {
       res.status(500).json({
         error: error.message || '配音失败',
         error_code: error.code || 'narrate_failed',
+      })
+    }
+  })
+
+  app.post('/api/voice/story', async (req, res) => {
+    if (!voiceStudioService) return unavailable(res)
+    const ownerId = req.identity?.ownerId
+    const inputSegments = Array.isArray(req.body?.segments) ? req.body.segments : []
+    if (!inputSegments.length || inputSegments.length > 64) {
+      return res.status(400).json({
+        error: '故事至少需要一个、最多 64 个段落',
+        error_code: 'story_segments_invalid',
+      })
+    }
+    const profiles = listOwnerProfiles(voiceStudioService, ownerId)
+    const tts = getCascadeTts() || {}
+    const segments = []
+    for (const [index, input] of inputSegments.entries()) {
+      const text = String(input?.text || '').trim()
+      if (!text) {
+        return res.status(400).json({
+          error: `第 ${index + 1} 个段落缺少文本`,
+          error_code: 'story_text_missing',
+        })
+      }
+      const match = resolveAuthorVoice({
+        profiles,
+        profileId: input?.profile_id,
+        voice: input?.voice,
+      })
+      const profile = match.profile
+      const remote = String(profile?.remoteId || profile?.remote_voice_id || '').trim()
+      if (!profile || !remote) {
+        return res.status(404).json({
+          error: `第 ${index + 1} 个段落未选择有效音色`,
+          error_code: 'story_voice_unresolved',
+        })
+      }
+      if (String(profile.provider || 'dashscope') !== 'dashscope') {
+        return res.status(400).json({
+          error: `第 ${index + 1} 个段落的 Provider 暂不支持故事合成`,
+          error_code: 'story_provider_unsupported',
+        })
+      }
+      segments.push({
+        text,
+        voice: remote,
+        speaker: String(input?.speaker || input?.label || `角色 ${index + 1}`).trim(),
+        label: profile.label || '',
+        profileId: profile.id || null,
+        model: profile.target_model || profile.targetModel || tts.model,
+      })
+    }
+    try {
+      const result = await withPreviewLock(async () => synthesizeStoryFn({
+        segments,
+        apiKey: tts.apiKey,
+        model: tts.model,
+        sampleRate: tts.sampleRate || 24000,
+        joinPauseMs: req.body?.join_pause_ms,
+        dashscopeWsUrl: tts.dashscopeWsUrl,
+        synthesizeNarration: synthesizeNarrationFn,
+      }))
+      const accept = String(req.headers.accept || '')
+      if (accept.includes('application/json')) {
+        return res.json({
+          status: 'ok',
+          report: result.report,
+          segments: result.segments,
+          audio_base64: result.wav.toString('base64'),
+        })
+      }
+      res.setHeader('Content-Type', 'audio/wav')
+      res.setHeader('Cache-Control', 'no-store')
+      return res.send(result.wav)
+    } catch (error) {
+      return res.status(500).json({
+        error: error.message || '故事合成失败',
+        error_code: error.code || 'story_failed',
       })
     }
   })

@@ -63,7 +63,7 @@ export const VOICE_WORKFLOWS = Object.freeze([
   }),
   defineVoiceWorkflow({
     id: 'multi-voice-story', title: '故事模式',
-    description: '多角色配音', status: 'planned',
+    description: '多角色配音', status: 'live', view: 'stories',
     capabilities: ['speech.synthesize', 'voice.profile.select'],
   }),
   defineVoiceWorkflow({

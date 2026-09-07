@@ -6,9 +6,9 @@ import {
   resolveVoiceStudioView,
 } from '../src/voice-studio-launchpad.js'
 
-test('launchpad includes live gallery and clone tiles', () => {
+test('launchpad includes live gallery, clone, and story tiles', () => {
   const live = VOICE_STUDIO_TILES.filter(item => item.status === 'live').map(item => item.id)
-  assert.deepEqual(live, ['gallery', 'clone', 'dub', 'audiobook'])
+  assert.deepEqual(live, ['gallery', 'clone', 'dub', 'audiobook', 'multi-story'])
   const gallery = VOICE_STUDIO_TILES.find(item => item.id === 'gallery')
   assert.equal(gallery.blurb, '试听声音，并选它来和助手聊天')
   assert.ok(VOICE_STUDIO_TILES.some(item => item.id === 'engines' && item.status === 'jump'))
@@ -18,6 +18,7 @@ test('launchpad includes live gallery and clone tiles', () => {
 test('voice studio view defaults and resolves safely', () => {
   assert.equal(defaultVoiceStudioView(), 'launchpad')
   assert.equal(resolveVoiceStudioView('gallery'), 'gallery')
+  assert.equal(resolveVoiceStudioView('stories'), 'stories')
   assert.equal(resolveVoiceStudioView('catalogue'), 'catalogue')
   assert.equal(resolveVoiceStudioView('nope'), 'launchpad')
 })

@@ -520,3 +520,43 @@ test('POST /api/voice/narrate resolves author and returns json report', async ()
     assert.ok(body.audio_base64)
   })
 })
+
+test('POST /api/voice/story resolves each profile and returns merged audio', async () => {
+  const wav = Buffer.from('story-wav')
+  await withServer(app => {
+    registerVoiceRoutes(app, {
+      voiceStudioService: mockService(),
+      getCascadeTts: () => ({ apiKey: 'k', model: 'm', sampleRate: 24000 }),
+      synthesizeStoryFn: async ({ segments }) => {
+        assert.deepEqual(segments.map(item => [item.speaker, item.voice]), [
+          ['旁白', 'voice-liu'],
+          ['角色 A', 'voice-liu'],
+        ])
+        return {
+          wav,
+          segments: [],
+          report: { provider: 'qwaudio-story', speaker_count: 2 },
+        }
+      },
+    })
+  }, async base => {
+    const res = await fetch(`${base}/api/voice/story`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        segments: [
+          { speaker: '旁白', text: '故事开始。', profile_id: 'p1' },
+          { speaker: '角色 A', text: '你好。', voice: 'voice-liu' },
+        ],
+      }),
+    })
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    assert.equal(body.status, 'ok')
+    assert.equal(body.report.provider, 'qwaudio-story')
+    assert.ok(body.audio_base64)
+  })
+})

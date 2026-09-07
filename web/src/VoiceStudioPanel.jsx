@@ -497,6 +497,97 @@ function audioDataUrl(base64) {
   return `data:audio/wav;base64,${base64}`
 }
 
+function StoryPage({ open, onOpenGallery }) {
+  const [profiles, setProfiles] = useState([])
+  const [segments, setSegments] = useState([
+    { speaker: '旁白', text: '', profileId: '' },
+    { speaker: '角色 A', text: '', profileId: '' },
+  ])
+  const [audioUrl, setAudioUrl] = useState('')
+  const [report, setReport] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) return undefined
+    let cancelled = false
+    fetch(apiUrl('voice/profiles'), { cache: 'no-store' })
+      .then(readJson)
+      .then(payload => {
+        if (!cancelled) setProfiles(organizeVoiceProfiles(payload.profiles || [], { showAll: true }).filter(profile => (profile.status === 'ready' || profile.status === 'confirmed') && profile.provider === 'dashscope'))
+      })
+      .catch(err => { if (!cancelled) setError(err.message) })
+    return () => { cancelled = true }
+  }, [open])
+
+  useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl) }, [audioUrl])
+
+  const updateSegment = (index, patch) => setSegments(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item))
+  const addSegment = () => setSegments(current => [...current, { speaker: `角色 ${String.fromCharCode(65 + current.length - 1)}`, text: '', profileId: '' }])
+  const removeSegment = index => setSegments(current => current.length <= 1 ? current : current.filter((_, itemIndex) => itemIndex !== index))
+
+  const generate = async () => {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch(apiUrl('voice/story'), {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          segments: segments.map(item => ({ speaker: item.speaker, text: item.text, profile_id: item.profileId })),
+        }),
+      })
+      const payload = await readJson(response)
+      if (audioUrl) URL.revokeObjectURL(audioUrl)
+      const bytes = Uint8Array.from(atob(payload.audio_base64), char => char.charCodeAt(0))
+      const nextUrl = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }))
+      setAudioUrl(nextUrl)
+      setReport(payload.report)
+    } catch (err) {
+      setError(err.message || '故事合成失败')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="voice-studio-body story-body">
+      <div className="story-intro">
+        <div><span className="studio-eyebrow">MULTI-SPEAKER</span><h3>故事模式</h3><p>为每一段选择角色音色，生成一条连续的对话音频。</p></div>
+        <button type="button" className="studio-quiet-button" onClick={onOpenGallery}>管理音色</button>
+      </div>
+      {error && <p className="settings-error">{error}</p>}
+      {!profiles.length && <div className="studio-empty-voices">暂无可用于故事合成的 DashScope 音色，请先到声音库创建或导入。</div>}
+      <div className="story-segments">
+        {segments.map((segment, index) => (
+          <article className="story-segment" key={`${index}-${segment.speaker}`}>
+            <div className="story-segment-index">{String(index + 1).padStart(2, '0')}</div>
+            <div className="story-segment-fields">
+              <div className="story-segment-meta">
+                <input aria-label={`第 ${index + 1} 段角色`} value={segment.speaker} onChange={event => updateSegment(index, { speaker: event.target.value })} placeholder="角色名" />
+                <select aria-label={`第 ${index + 1} 段音色`} value={segment.profileId} onChange={event => updateSegment(index, { profileId: event.target.value })}>
+                  <option value="">选择音色</option>
+                  {profiles.map(profile => <option key={profile.id} value={profile.id}>{friendlyVoiceName(profile)}</option>)}
+                </select>
+                <button type="button" className="studio-icon-button" onClick={() => removeSegment(index)} disabled={segments.length <= 1} aria-label="删除段落">×</button>
+              </div>
+              <textarea aria-label={`第 ${index + 1} 段文本`} value={segment.text} onChange={event => updateSegment(index, { text: event.target.value })} placeholder="输入这一段台词…" rows={3} />
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="story-actions">
+        <button type="button" className="studio-quiet-button" onClick={addSegment}>＋ 添加段落</button>
+        <button type="button" className="studio-generate-button" disabled={busy || !profiles.length || segments.some(item => !item.text.trim() || !item.profileId)} onClick={generate}>
+          <Play size={17} fill="currentColor" /> {busy ? '合成中…' : '生成故事音频'}
+        </button>
+      </div>
+      {audioUrl && <div className="story-result"><strong>生成结果</strong><audio controls src={audioUrl} /><small>{report?.speaker_count || segments.length} 个角色 · {report?.provider_request_count || '—'} 次引擎请求</small></div>}
+    </div>
+  )
+}
+
 function StudioWorkbench({ runtime, nativeGatewayReady, onOpenGallery, onOpenClone }) {
   const [profiles, setProfiles] = useState([])
   const [selectedProfile, setSelectedProfile] = useState(null)
@@ -699,6 +790,8 @@ export default function VoiceStudioPanel({
     ? '声音库'
     : view === 'clone'
       ? '克隆'
+      : view === 'stories'
+        ? '故事模式'
       : view === 'dub'
         ? '视频配音'
         : view === 'catalogue'
@@ -732,6 +825,7 @@ export default function VoiceStudioPanel({
             ['launchpad', '工作室'],
             ['gallery', '声音库'],
             ['clone', '克隆'],
+            ['stories', '故事'],
             ['dub', '配音'],
             ['catalogue', '模型'],
           ].map(([value, label]) => (
@@ -775,6 +869,7 @@ export default function VoiceStudioPanel({
             onModeSwitching={onModeSwitching}
           />
         )}
+        {view === 'stories' && <StoryPage open={open && view === 'stories'} onOpenGallery={() => setView('gallery')} />}
         {view === 'dub' && <MediaWorkspacePanel open={open && view === 'dub'} />}
         {view === 'catalogue' && <ModelCataloguePanel />}
       </div>
