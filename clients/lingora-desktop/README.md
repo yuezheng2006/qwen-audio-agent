@@ -33,6 +33,14 @@ cargo tauri dev
 
 The Vite workbench uses port `5174` in this repository; the Tauri dev URL is kept in sync with that configuration.
 
+To build a local macOS application bundle from the same directory:
+
+```bash
+cargo tauri build --debug --bundles app
+```
+
+The bundle is written to `src-tauri/target/debug/bundle/macos/Lingora.app`.
+
 For a local checkout, the host expects the repository Node runtime and its
 installed dependencies. `LINGORA_RUNTIME_ROOT` can point to another Gateway
 checkout, and `LINGORA_NODE_BINARY` can select a specific Node executable.
