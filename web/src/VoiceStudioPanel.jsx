@@ -513,22 +513,34 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
 
   useEffect(() => {
     let cancelled = false
-    fetch(apiUrl('voice/profiles'))
-      .then(response => response.ok ? response.json() : null)
-      .then(payload => {
-        if (cancelled || !payload) return
-        const nextProfiles = organizeVoiceProfiles(payload.profiles || [], { showAll: true })
-          .filter(profile => ['ready', 'confirmed'].includes(profile.status))
-        setProfiles(nextProfiles)
-        const activeId = payload.active?.voice
-        const active = nextProfiles.find(profile => profile.remote_voice_id === activeId)
-        // Do not silently turn the first gallery item into the active voice.
-        // The Gateway may be using a local/system voice that has no profile.
-        setSelectedProfile(active || null)
-      })
-      .catch(() => {})
+    const loadProfiles = async () => {
+      let lastError
+      for (let attempt = 0; attempt < 8 && !cancelled; attempt += 1) {
+        if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 300))
+        try {
+          const response = await fetch(apiUrl('voice/profiles'), { cache: 'no-store' })
+          if (!response.ok) throw new Error(`声音库请求失败（${response.status}）`)
+          const payload = await response.json()
+          if (cancelled) return
+          const nextProfiles = organizeVoiceProfiles(payload.profiles || [], { showAll: true })
+            .filter(profile => ['ready', 'confirmed'].includes(profile.status))
+          setProfiles(nextProfiles)
+          const activeId = payload.active?.voice
+          const active = nextProfiles.find(profile => profile.remote_voice_id === activeId)
+          // Do not silently turn the first gallery item into the active voice.
+          // The Gateway may be using a local/system voice that has no profile.
+          setSelectedProfile(active || null)
+          setError('')
+          return
+        } catch (loadError) {
+          lastError = loadError
+        }
+      }
+      if (!cancelled) setError(lastError?.message || '声音库加载失败，请重试。')
+    }
+    loadProfiles()
     return () => { cancelled = true }
-  }, [])
+  }, [runtime?.frontendMode])
 
   const visibleProfiles = profiles.filter(profile => {
     const value = [friendlyVoiceName(profile), profile.provider, profile.label]
@@ -612,7 +624,15 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
               </button>
             )
           })}
-          {!visibleProfiles.length && <div className="studio-empty-voices">还没有可用声音<br /><button type="button" onClick={onOpenClone}>创建我的声音</button></div>}
+          {!visibleProfiles.length && (
+            <div className="studio-empty-voices">
+              {error ? `${error}` : '还没有可用声音'}
+              <br />
+              <button type="button" onClick={onOpenGallery}>打开声音库</button>
+              {' · '}
+              <button type="button" onClick={onOpenClone}>创建我的声音</button>
+            </div>
+          )}
         </div>
       </aside>
 
