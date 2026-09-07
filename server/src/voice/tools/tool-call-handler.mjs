@@ -17,6 +17,9 @@ import {
   FETCH_URL_TOOL_NAME,
   KNOWLEDGE_TOOL_NAME,
   KNOWLEDGE_SEARCH_TOOL_NAME,
+  FRONTEND_KNOWLEDGE_CAPABILITY,
+  CONTENT_CONTROL_TOOL_NAME,
+  CONTENT_READER_CAPABILITY,
   frontendToolRegistry,
   RECALL_TOOL_NAME,
   FRONTEND_RECALL_CAPABILITY,
@@ -152,10 +155,14 @@ export class ToolCallHandler {
     inputAssets = null,
     frontendRetrieval = null,
     frontendKnowledge = null,
+    knowledgeStore = null,
+    onKnowledgeHits = () => {},
+    getWorkspace = () => '',
     frontendToolSources = [],
     capabilityRegistry = null,
     turnCitations = null,
     sessionDigests = null,
+    readerSession = null,
   }) {
     this.taskManager = taskManager
     this.ownerId = ownerId
@@ -181,6 +188,9 @@ export class ToolCallHandler {
     this.inputAssets = inputAssets
     this.frontendRetrieval = frontendRetrieval
     this.frontendKnowledge = frontendKnowledge
+    this.knowledgeStore = knowledgeStore
+    this.onKnowledgeHits = onKnowledgeHits
+    this.getWorkspace = getWorkspace
     this.frontendToolSources = frontendToolSources
     this.capabilityRegistry = capabilityRegistry
     this.turnCitations = turnCitations
@@ -220,8 +230,12 @@ export class ToolCallHandler {
       [RECALL_TOOL_NAME]: ({ callId, turnId, args }) => (
         this.recall(callId, turnId, args)
       ),
+      [CONTENT_CONTROL_TOOL_NAME]: ({ callId, turnId, args }) => (
+        this.contentControl(callId, turnId, args)
+      ),
     })
     this.sessionDigests = sessionDigests
+    this.readerSession = readerSession
     this.gatewayApprovedPermissions = new Set()
     this.processedCalls = new Set()
     this.spawnResponseByTurn = new Map()
@@ -235,6 +249,66 @@ export class ToolCallHandler {
 
   externalTool(name) {
     return findFrontendSourceTool(this.frontendToolSources, name)
+  }
+
+  async contentControl(callId, turnId, args = {}) {
+    const action = String(args.action || '').trim().toLowerCase()
+    const allowed = new Set([
+      'list', 'status', 'start_read', 'start_explain',
+      'pause', 'resume', 'stop', 'seek',
+    ])
+    if (!allowed.has(action)) {
+      return this.sendOutput(callId, failure(
+        'invalid_content_action',
+        '朗读操作不受支持。',
+      ), turnId)
+    }
+    if (!this.readerSession) {
+      return this.sendOutput(callId, failure(
+        'reader_unavailable',
+        '当前语音会话没有可用的朗读器。',
+        { retryable: true },
+      ), turnId)
+    }
+    try {
+      if (action === 'list') {
+        return this.sendOutput(callId, {
+          status: 'ok',
+          contents: this.readerSession.listContents?.() || [],
+        }, turnId)
+      }
+      if (action === 'status') {
+        return this.sendOutput(callId, {
+          status: 'ok',
+          progress: this.readerSession.snapshot(),
+        }, turnId)
+      }
+      let progress
+      if (action === 'start_read' || action === 'start_explain') {
+        progress = await this.readerSession.start(
+          action === 'start_read' ? 'read' : 'explain',
+          {
+            contentId: String(args.content_id || '').trim(),
+            offset: Number(args.offset) || 0,
+          },
+        )
+      } else if (action === 'pause') {
+        progress = this.readerSession.pause()
+      } else if (action === 'resume') {
+        progress = await this.readerSession.resume()
+      } else if (action === 'stop') {
+        progress = this.readerSession.stop()
+      } else if (action === 'seek') {
+        progress = await this.readerSession.seek(Number(args.offset) || 0)
+      }
+      return this.sendOutput(callId, { status: 'ok', action, progress }, turnId)
+    } catch (error) {
+      return this.sendOutput(callId, failure(
+        'content_control_failed',
+        error.message || '朗读操作失败。',
+        { retryable: true },
+      ), turnId)
+    }
   }
 
   emitToolCallDebug(event) {
@@ -1089,11 +1163,13 @@ export class ToolCallHandler {
           capabilities: [...new Set([
             ...(this.frontendRetrieval?.capabilities?.() || []),
             ...(this.frontendKnowledge?.capabilities?.() || []),
+            ...(this.knowledgeStore ? [FRONTEND_KNOWLEDGE_CAPABILITY] : []),
             // 与 realtime-gateway 的 getAgentContext 同一个判据：两处必须一致，
             // 否则会出现「模型看得到工具但调用被策略拒掉」这种自相矛盾的状态。
             // 与 realtime-gateway 的 getAgentContext 必须同一个判据。资料检索
             // 已归 knowledge 工具，所以这里只看会话摘要。
             ...(this.sessionDigests ? [FRONTEND_RECALL_CAPABILITY] : []),
+            ...(this.readerSession ? [CONTENT_READER_CAPABILITY] : []),
             ...(this.hasPendingBackendPermission()
               ? [PERMISSION_RESPONSE_CAPABILITY]
               : []),
@@ -1239,7 +1315,7 @@ export class ToolCallHandler {
   }
 
   async knowledge({ callId, turnId, args }) {
-    if (!this.frontendKnowledge) {
+    if (!this.frontendKnowledge && !this.knowledgeStore) {
       await this.sendOutput(
         callId,
         failure('knowledge_unavailable', '前台知识库当前不可用。'),
@@ -1249,6 +1325,31 @@ export class ToolCallHandler {
     }
     try {
       const query = String(args.query || '').trim()
+      if (!this.frontendKnowledge) {
+        if (!query) {
+          await this.sendOutput(callId, failure(
+            'missing_query',
+            '需要提供要检索的内容。',
+          ), turnId)
+          return
+        }
+        const workspace = String(this.getWorkspace?.() || '').trim().toLowerCase()
+        const kbId = workspace === 'support'
+          ? 'support'
+          : String(args.kb_id || 'default').trim() || 'default'
+        const hits = this.knowledgeStore.search(query, {
+          kbId,
+          limit: args.top_k,
+        })
+        this.onKnowledgeHits(hits)
+        await this.sendOutput(callId, {
+          status: hits.length ? 'ok' : 'not_found',
+          format: 'markdown',
+          count: hits.length,
+          hits,
+        }, turnId)
+        return
+      }
       const output = query
         ? await this.frontendKnowledge.search(query, {
             ownerId: this.ownerId,

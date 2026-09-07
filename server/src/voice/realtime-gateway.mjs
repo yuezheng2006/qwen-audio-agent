@@ -50,6 +50,7 @@ import {
 import {
   PERMISSION_RESPONSE_CAPABILITY,
   BACKEND_INPUT_RESPONSE_CAPABILITY,
+  CONTENT_READER_CAPABILITY,
   FRONTEND_RECALL_CAPABILITY,
   permissionResponseInstructions,
   inputRequestResponseInstructions,
@@ -74,6 +75,7 @@ import {
 import { PresenceController } from '../client/presence-controller.mjs'
 import { GatewayClientReplayBuffer } from '../transport/gateway-client-replay-buffer.mjs'
 import { permissionReference } from './tools/permission-reference.mjs'
+import { ReaderSession } from './reader/reader-session.mjs'
 
 const MAX_PENDING_AUDIO_CHUNKS = 30
 const RESPONSE_START_WATCHDOG_MS = 12000
@@ -173,6 +175,9 @@ export function attachRealtimeGateway(server, {
   taskAnnouncementFactory = createTaskAnnouncementRuntime,
   clientCommandRuntime = null,
   clientEventRouter = null,
+  contentStore = null,
+  readerProgressByOwner = null,
+  readerSessionsByOwner = null,
 }) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 20 * 1024 * 1024 })
   const supportedClientCapabilities = GATEWAY_CLIENT_IMPLEMENTED_CAPABILITIES
@@ -316,6 +321,15 @@ export function attachRealtimeGateway(server, {
     const announcedInputs = new Set()
     let permissionRetryTimer = null
     let realtimeSession
+    let readerSession = readerSessionsByOwner?.get(ownerId) || null
+    if (!readerSession && contentStore) {
+      readerSession = new ReaderSession({
+        contentStore,
+        getFrontend: () => realtimeSession?.frontend,
+        onProgress: progress => readerProgressByOwner?.set(ownerId, progress),
+      })
+      readerSessionsByOwner?.set(ownerId, readerSession)
+    }
     const agentDeliveries = new RealtimeAgentDeliveryRuntime({
       getFrontend: () => realtimeSession?.frontend,
       isDeliveryBlocked: () => (
@@ -360,6 +374,7 @@ export function attachRealtimeGateway(server, {
           // 暴露它只会让模型白调一次。会话摘要本身绝不注入 instructions：
           // 它每场都在变，会让 prompt 前缀每场都变。
           ...(sessionDigests ? [FRONTEND_RECALL_CAPABILITY] : []),
+          ...(readerSession ? [CONTENT_READER_CAPABILITY] : []),
         ])],
         tools: frontendSourceToolDefinitions(frontendToolSources),
       },
@@ -720,6 +735,7 @@ export function attachRealtimeGateway(server, {
       respondAuthorization,
       respondInput,
       permissionPolicy,
+      readerSession,
       // The permission decision was accepted locally but never reached the
       // backend: the authorization is still pending there, so clear the
       // announced mark and let the standard re-announce path ask again.

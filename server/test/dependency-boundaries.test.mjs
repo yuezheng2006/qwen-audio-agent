@@ -18,6 +18,9 @@ const allowedDependencies = {
     'delivery',
     'domain',
     'frontend',
+    'media',
+    'capabilities',
+    'external',
     'providers',
     'session',
     'task',
@@ -27,6 +30,7 @@ const allowedDependencies = {
   process: new Set(['process', 'shared']),
   core: new Set(['core', 'shared']),
   frontend: new Set(['frontend']),
+  capabilities: new Set(['capabilities', 'conversation', 'core', 'frontend', 'plugins', 'shared']),
   providers: new Set(['core', 'frontend', 'providers', 'shared']),
   agent: new Set(['agent', 'backend', 'core', 'shared']),
   backend: new Set(['backend', 'core', 'shared']),
@@ -36,14 +40,19 @@ const allowedDependencies = {
   // 资料库刻意不依赖 conversation：它复用的落盘与敏感闸门都在 core，
   // 让「用户给的手册」去依赖「会话逻辑」是没有道理的耦合。
   domain: new Set(['core', 'domain', 'shared']),
+  knowledge: new Set(['knowledge', 'core', 'shared']),
   session: new Set(['session', 'shared']),
   task: new Set(['agent', 'core', 'session', 'task']),
   transport: new Set(['shared', 'task', 'transport']),
+  media: new Set(['media', 'voice']),
+  plugins: new Set(['capabilities', 'plugins', 'shared']),
   voice: new Set([
     'client',
     'conversation',
     'core',
     'delivery',
+    'capabilities',
+    'plugins',
     'frontend',
     'shared',
     'task',
@@ -62,6 +71,8 @@ function sourceFiles(directory) {
 function layerFor(path) {
   const sharedPath = relative(sharedRoot, path)
   if (sharedPath !== '..' && !sharedPath.startsWith(`..${sep}`)) return 'shared'
+  const projectPath = relative(projectRoot, path)
+  if (projectPath === 'scripts' || projectPath.startsWith(`scripts${sep}`)) return 'external'
   const first = relative(sourceRoot, path).split(sep)[0]
   return first.endsWith('.mjs') ? 'root' : first
 }

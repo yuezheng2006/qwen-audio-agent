@@ -11,6 +11,7 @@ import {
 import {
   FRONTEND_KNOWLEDGE_CAPABILITY,
 } from '../frontend/knowledge/knowledge-runtime.mjs'
+export { FRONTEND_KNOWLEDGE_CAPABILITY }
 import {
   spawnThinkingTool,
   withSpawnThinkingDescription,
@@ -38,6 +39,10 @@ export const KNOWLEDGE_TOOL_NAME = 'knowledge'
 // provider-agnostic tool. Keep the alias at the workspace boundary only.
 export const KNOWLEDGE_SEARCH_TOOL_NAME = 'knowledge_search'
 export const RECALL_TOOL_NAME = 'recall'
+// HTTP clients use /api/content/control; voice clients use the same reader
+// contract through this front-end tool.
+export const CONTENT_CONTROL_TOOL_NAME = 'content_control'
+export const CONTENT_READER_CAPABILITY = 'content.reader'
 // recall 依赖会话摘要池或资料库，两者都可能没启用。用 capability 声明而不是
 // 在 gateway 里手工拼工具数组 —— 后者会绕过 registry 的策略过滤。
 export const FRONTEND_RECALL_CAPABILITY = 'recall'
@@ -373,6 +378,27 @@ const recallTool = {
   },
 }
 
+const contentControlTool = {
+  type: 'function',
+  function: {
+    name: CONTENT_CONTROL_TOOL_NAME,
+    description: '控制本地内容朗读。list 列出内容，start_read 朗读，start_explain 逐段解释，pause 暂停，resume 继续，seek 跳段，stop 停止。',
+    parameters: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['list', 'status', 'start_read', 'start_explain', 'pause', 'resume', 'stop', 'seek'],
+        },
+        content_id: { type: 'string' },
+        offset: { type: 'integer', minimum: 0 },
+      },
+      required: ['action'],
+      additionalProperties: false,
+    },
+  },
+}
+
 export const frontendToolRegistry = new FrontendToolRegistry([
   {
     definition: spawnThinkingTool,
@@ -398,6 +424,10 @@ export const frontendToolRegistry = new FrontendToolRegistry([
       mode: 'inline',
       requiredCapabilities: [FRONTEND_RECALL_CAPABILITY],
     },
+  },
+  {
+    definition: contentControlTool,
+    policy: { mode: 'control', requiredCapabilities: [CONTENT_READER_CAPABILITY] },
   },
   {
     definition: respondPermissionTool,

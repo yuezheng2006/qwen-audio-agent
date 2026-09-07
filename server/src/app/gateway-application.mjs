@@ -1126,6 +1126,9 @@ realtimeGateway = attachRealtimeGateway(server, {
   taskAnnouncementFactory,
   clientCommandRuntime: runtimeCommands,
   clientEventRouter: gatewayEventRouter,
+  contentStore,
+  readerProgressByOwner,
+  readerSessionsByOwner,
 })
 const start = ({ host = config.host, port = config.port } = {}) => {
   if (server.listening) return server

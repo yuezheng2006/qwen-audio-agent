@@ -208,6 +208,7 @@ test('declares one background tool and classifies every other tool', () => {
     web_search: 'inline',
     fetch_url: 'inline',
     enter_sleep: 'control',
+    content_control: 'control',
   })
 })
 
