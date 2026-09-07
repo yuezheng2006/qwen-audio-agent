@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { resolveCascadeConfig } from '../src/core/config.mjs'
+import {
+  DEFAULT_CASCADE_DASHSCOPE_WS_URL,
+  resolveCascadeConfig,
+  resolveCascadeDashScopeWsUrl,
+} from '../src/core/config.mjs'
+
+test('cascade TTS uses the DashScope inference WebSocket, not the S2S realtime endpoint', () => {
+  assert.equal(resolveCascadeDashScopeWsUrl({}), DEFAULT_CASCADE_DASHSCOPE_WS_URL)
+  assert.equal(
+    resolveCascadeDashScopeWsUrl({ CASCADE_DASHSCOPE_WS_URL: 'wss://tts.example/ws' }),
+    'wss://tts.example/ws',
+  )
+  assert.equal(resolveCascadeConfig({}).dashscopeWsUrl, DEFAULT_CASCADE_DASHSCOPE_WS_URL)
+})
 
 test('cascade defaults use Bailian services with the shared DashScope key', () => {
   const cascade = resolveCascadeConfig({ DASHSCOPE_API_KEY: 'shared-key' })

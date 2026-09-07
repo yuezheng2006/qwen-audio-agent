@@ -216,15 +216,19 @@ export function resolveCascadeTtsConfig(env = process.env, sharedKey = '') {
   return resolveCascadeTtsPluginConfig(env, sharedKey)
 }
 
+export const DEFAULT_CASCADE_DASHSCOPE_WS_URL =
+  'wss://dashscope.aliyuncs.com/api-ws/v1/inference'
+
+export function resolveCascadeDashScopeWsUrl(env = process.env) {
+  return env.CASCADE_DASHSCOPE_WS_URL || DEFAULT_CASCADE_DASHSCOPE_WS_URL
+}
+
 export function resolveCascadeConfig(env = process.env) {
   const sharedKey = env.QWEN_AUDIO_REALTIME_API_KEY || env.DASHSCOPE_API_KEY || ''
   return {
     host: '127.0.0.1',
     port: numberSetting(env.CASCADE_PORT, 0, { min: 0, max: 65535 }),
-    dashscopeWsUrl: (
-      env.CASCADE_DASHSCOPE_WS_URL
-      || 'wss://dashscope.aliyuncs.com/api-ws/v1/inference'
-    ),
+    dashscopeWsUrl: resolveCascadeDashScopeWsUrl(env),
     stt: {
       provider: (env.CASCADE_STT_PROVIDER || 'dashscope').toLowerCase(),
       // DashScope inference duplex ASR。官方实时推荐 qwen-audio-3.0-asr-flash-streaming；
@@ -328,7 +332,10 @@ export const config = {
   cascade: {
     host: process.env.CASCADE_HOST || '127.0.0.1',
     port: numberSetting(process.env.CASCADE_PORT, 0, { min: 0, max: 65535 }),
-    dashscopeWsUrl: realtimeFrontend.dashscopeRealtimeUrl,
+    // Cascade TTS uses DashScope's task/inference protocol. The realtime
+    // S2S frontend uses a different `/realtime` endpoint and must not leak
+    // into this adapter configuration.
+    dashscopeWsUrl: resolveCascadeDashScopeWsUrl(process.env),
     vad: {
       energyThreshold: numberSetting(process.env.CASCADE_VAD_ENERGY_THRESHOLD, 500, { min: 0 }),
       silenceMs: numberSetting(process.env.CASCADE_VAD_SILENCE_MS, 700, { min: 100 }),
