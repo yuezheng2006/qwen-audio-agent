@@ -614,10 +614,6 @@ function StudioWorkbench({ runtime, onOpenGallery, onOpenClone }) {
           })}
           {!visibleProfiles.length && <div className="studio-empty-voices">还没有可用声音<br /><button type="button" onClick={onOpenClone}>创建我的声音</button></div>}
         </div>
-        <div className="studio-left-empty">
-          <strong>还没有设计声音</strong>
-          <span>在这里创建或管理你的声音</span>
-        </div>
       </aside>
 
       <main className="studio-editor-panel">

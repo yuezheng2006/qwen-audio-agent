@@ -242,15 +242,25 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([readNativeClientInfo(), readNativeGatewayHealth()])
-      .then(async ([info, gateway]) => {
-        if (cancelled) return
-        if (info && !gateway?.reachable) {
-          const started = await startNativeGateway()
-          if (started?.ok) {
-            gateway = await readNativeGatewayHealth()
-          }
-        }
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+    const resolveGateway = async info => {
+      if (!info) return null
+      let gateway = await readNativeGatewayHealth()
+      if (!gateway?.reachable) {
+        await startNativeGateway()
+      }
+      // The launcher returns before a cold Gateway has necessarily completed
+      // its health transition. Keep the header truthful instead of freezing
+      // the initial offline result for the lifetime of the app.
+      for (let attempt = 0; attempt < 24 && !gateway?.reachable; attempt += 1) {
+        if (attempt > 0) await sleep(250)
+        gateway = await readNativeGatewayHealth()
+      }
+      return gateway
+    }
+    readNativeClientInfo()
+      .then(async info => [info, await resolveGateway(info)])
+      .then(([info, gateway]) => {
         if (cancelled) return
         setNativeClient(info)
         setNativeGateway(gateway)

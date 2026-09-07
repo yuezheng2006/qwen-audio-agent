@@ -82,6 +82,7 @@ export default function VoiceGallery({
   const [error, setError] = useState('')
 
   const audioRef = useRef(null)
+  const previewObjectUrlRef = useRef('')
   const playTokenRef = useRef(0)
   const playWaitRef = useRef(null)
 
@@ -95,6 +96,10 @@ export default function VoiceGallery({
       audio.load()
     }
     audioRef.current = null
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current)
+      previewObjectUrlRef.current = ''
+    }
     const waiter = playWaitRef.current
     playWaitRef.current = null
     waiter?.resolve()
@@ -184,9 +189,26 @@ export default function VoiceGallery({
   }
 
   const playCachedPreview = async (profile) => {
-    const url = previewUrlFor(profile)
+    let url = previewUrlFor(profile)
+    if (!url && canPreviewProvider(profile.provider, voiceCapabilities)) {
+      const response = await fetch(apiUrl('voice/preview'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_id: profile.id }),
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error || `试听生成失败（${response.status}）`)
+      }
+      const blob = await response.blob()
+      previewObjectUrlRef.current = URL.createObjectURL(blob)
+      url = previewObjectUrlRef.current
+      // The Gateway writes the same WAV to its cache. Refresh in the
+      // background so the download action becomes available after playback.
+      refreshVoiceProfiles().catch(() => {})
+    }
     if (!url) {
-      throw new Error('试听尚未准备')
+      throw new Error('当前音色不支持试听')
     }
     const token = ++playTokenRef.current
     clearAudio()
@@ -241,10 +263,13 @@ export default function VoiceGallery({
       stopPreview()
       return
     }
+    setBusy(true)
     try {
       await playCachedPreview(profile)
     } catch (err) {
       setError(err.message)
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -410,7 +435,7 @@ export default function VoiceGallery({
                     && profile.remote_voice_id === activeVoice.voice
                     && profile.provider === (activeVoice.provider || profile.provider)
                   const canPreview = canPreviewProvider(profile.provider, voiceCapabilities)
-                    && Boolean(previewUrlFor(profile))
+                  const hasPreview = Boolean(previewUrlFor(profile))
                   const name = friendlyVoiceName(profile)
                   const isPlaying = previewingId === profile.id && previewPhase === 'playing'
                   const avatarTone = voiceAvatarTone(name)
@@ -445,7 +470,9 @@ export default function VoiceGallery({
                           {isActive && <em>使用中</em>}
                         </div>
                         <div className="voice-row-meta">
-                          {canPreview ? '可试听 · 可下载' : '试听未准备'}
+                          {canPreview
+                            ? (hasPreview ? '可试听 · 可下载' : '可试听 · 首次点击生成')
+                            : '当前音色不支持试听'}
                         </div>
                       </div>
                       <div className="voice-row-actions">
@@ -458,7 +485,7 @@ export default function VoiceGallery({
                           ].filter(Boolean).join(' ')}
                           disabled={busy || !canPreview}
                           aria-label={isPlaying ? '停止试听' : `试听 ${name}`}
-                          title={canPreview ? (isPlaying ? '停止' : '试听') : '试听未准备'}
+                          title={canPreview ? (isPlaying ? '停止' : '试听') : '当前音色不支持试听'}
                           onClick={event => {
                             event.stopPropagation()
                             previewVoice(profile)

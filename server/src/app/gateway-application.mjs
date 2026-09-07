@@ -32,7 +32,10 @@ import {
   classifySource,
 } from '../domain/domain-library.mjs'
 import { DomainSummariser } from '../domain/domain-summariser.mjs'
-import { enforceSameOrigin } from '../core/request-security.mjs'
+import {
+  enforceSameOrigin,
+  isDesktopAppOrigin,
+} from '../core/request-security.mjs'
 import {
   GATEWAY_CAPABILITIES,
   GATEWAY_PROTOCOL_VERSION,
@@ -575,6 +578,21 @@ const gatewayEventRouter = clientEventRouter || new GatewayEventRouter({
 })
 
 app.disable('x-powered-by')
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  if (isDesktopAppOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With')
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Vary', 'Origin')
+    if (req.method === 'OPTIONS') {
+      res.status(204).end()
+      return
+    }
+  }
+  next()
+})
 app.use(enforceSameOrigin)
 app.use((req, res, next) => {
   req.identity = identityManager.resolveHttp(req, res)

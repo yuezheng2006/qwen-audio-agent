@@ -2920,12 +2920,12 @@ header select.frontend-provider option {
 .voice-studio-app .studio-history-item audio { width: 100%; height: 28px; }
 
 @media (max-width: 1050px) {
-  .voice-studio-app .studio-workbench { grid-template-columns: 190px minmax(420px, 1fr); gap: 18px; }
+  .voice-studio-app .studio-workbench { grid-template-columns: 180px minmax(0, 1fr); gap: 16px; }
   .voice-studio-app .studio-history-panel { display: none; }
 }
 @media (max-width: 700px) {
-  .voice-studio-app .studio-workbench { display: block; overflow: auto; }
-  .voice-studio-app .studio-voices-panel { display: none; }
+  .voice-studio-app .studio-workbench { display: block; overflow: visible; }
+  .voice-studio-app .studio-voices-panel { display: block; margin-bottom: 18px; }
   .voice-studio-app .studio-script-editor { min-height: 280px; }
   .voice-studio-app .studio-synthesis-controls { margin-top: 24px; }
   .voice-studio-app .studio-control-heading { align-items: flex-start; flex-direction: column; }
@@ -3077,6 +3077,7 @@ header select.frontend-provider option {
 .voice-studio-app .voice-tips-fold { padding: 7px 10px; }
 .voice-studio-app .studio-workbench {
   min-height: calc(100dvh - 112px);
+  min-width: 0;
   gap: 16px;
 }
 .voice-studio-app .studio-voices-panel { padding-bottom: 8px; }
@@ -3107,6 +3108,11 @@ header select.frontend-provider option {
 .voice-studio-app .studio-history-list { gap: 7px; }
 .voice-studio-app .studio-history-item { padding: 9px; }
 .voice-studio-app .studio-history-item p { margin: 5px 0; }
+
+/* Narrow windows keep controls inside the scrollable canvas. */
+.voice-studio-app .studio-control-heading,
+.voice-studio-app .studio-advanced-row { flex-wrap: wrap; }
+.voice-studio-app .studio-advanced-row > * { min-width: 0; }
 
 /* Structural VoiceStudio shell: the workbench owns the full canvas. */
 .voice-studio-app .workspace-voice-studio {

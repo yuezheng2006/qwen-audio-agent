@@ -1,10 +1,19 @@
 import { config } from './config.mjs'
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
+const DESKTOP_APP_ORIGINS = new Set([
+  'tauri://localhost',
+  'http://tauri.localhost',
+  'https://tauri.localhost',
+])
 
 function normalizedOrigin(value) {
   try {
-    return new URL(value).origin
+    const url = new URL(value)
+    // URL.origin is the literal string "null" for custom schemes such as
+    // Tauri's tauri://localhost origin. Preserve the canonical app origin.
+    if (url.protocol === 'tauri:') return `${url.protocol}//${url.host}`
+    return url.origin
   } catch {
     return ''
   }
@@ -20,6 +29,10 @@ function parsedHost(value) {
   } catch {
     return null
   }
+}
+
+export function isDesktopAppOrigin(value) {
+  return DESKTOP_APP_ORIGINS.has(normalizedOrigin(value))
 }
 
 function trustedOrigins(allowedOrigins) {
@@ -56,6 +69,14 @@ export function isAllowedOrigin(
     // Browsers may also send the literal "null" origin.
     if (!origin) {
       return LOOPBACK_HOSTS.has(requestHost.hostname) || trustedHost
+    }
+
+    // Tauri v2 uses tauri://localhost on macOS/Linux and tauri.localhost on
+    // platforms that expose the WebView through an http origin. These are
+    // local app origins, not network origins; only accept them when the
+    // Gateway itself is bound to a literal loopback host.
+    if (isDesktopAppOrigin(origin)) {
+      return LOOPBACK_HOSTS.has(requestHost.hostname)
     }
 
     const originUrl = new URL(origin)

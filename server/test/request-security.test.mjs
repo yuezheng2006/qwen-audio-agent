@@ -62,3 +62,21 @@ test('allows only an explicitly configured reverse-proxy origin', () => {
     allowedOrigins: ['http://voice.example.com'],
   }), false)
 })
+
+test('allows the Tauri desktop origins only to a loopback Gateway', () => {
+  for (const origin of [
+    'tauri://localhost',
+    'http://tauri.localhost',
+    'https://tauri.localhost',
+  ]) {
+    assert.equal(isAllowedOrigin({
+      headers: { host: '127.0.0.1:3101', origin },
+    }), true)
+  }
+  assert.equal(isAllowedOrigin({
+    headers: {
+      host: '192.168.1.20:3101',
+      origin: 'http://tauri.localhost',
+    },
+  }), false)
+})
